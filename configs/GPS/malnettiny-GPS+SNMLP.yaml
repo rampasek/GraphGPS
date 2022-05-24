@@ -1,0 +1,75 @@
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: True
+  project: malnet
+dataset:
+  format: PyG-MalNetTiny
+  name: LocalDegreeProfile
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: SignNet
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: False
+posenc_SignNet:
+  enable: True
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 10
+  model: MLP
+  dim_pe: 10  # Note: In original SignNet codebase dim_pe is always equal to max_freq
+  layers: 8  # Num. layers in \phi model
+  post_layers: 2  # Num. layers in \rho model; The original uses the same as in \phi
+  phi_hidden_dim: 64
+  phi_out_dim: 4
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: GPSModel
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: max
+gt:
+  layer_type: CustomGatedGCN+Performer
+  layers: 5
+  n_heads: 4
+  dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dropout: 0.0
+  attn_dropout: 0.5
+  layer_norm: False
+  batch_norm: True
+gnn:
+  head: default
+  layers_pre_mp: 0
+  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
+  dim_inner: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1e-5
+  base_lr: 0.0005
+  max_epoch: 150
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
+#optim:
+#  optimizer: adam
+#  weight_decay: 0.0
+#  base_lr: 0.0005
+#  max_epoch: 500
+#  scheduler: reduce_on_plateau
+#  reduce_factor: 0.5
+#  schedule_patience: 20
+#  min_lr: 1e-5

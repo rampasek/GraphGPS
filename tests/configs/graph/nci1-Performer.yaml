@@ -1,0 +1,67 @@
+out_dir: tests/results
+run_multiple_splits: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+metric_best: accuracy
+round: 5
+wandb:
+  use: True
+  project: scratch  # W&B project for debugging runs.
+dataset:
+  format: PyG-TUDataset
+  name: NCI1
+  task: graph
+  task_type: classification
+  transductive: False
+  split_mode: cv-stratifiedkfold-10
+  split_dir: tests/splits
+  node_encoder: True
+  node_encoder_name: LapPE
+  node_encoder_bn: False
+posenc_LapPE:
+  enable: True
+  eigen:
+    laplacian_norm: sym
+    eigvec_norm: L2
+    max_freqs: 10
+  model: DeepSet
+  dim_pe: 16
+  layers: 3
+  n_heads: 4  # Only used when `posenc.model: Transformer`
+  raw_norm_type: none
+train:
+  mode: custom
+  batch_size: 128
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: Performer
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: add
+gt:
+  layers: 2
+  n_heads: 4
+  dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
+  full_graph: True
+  gamma: 1e-2
+  dropout: 0.0
+  layer_norm: False
+  batch_norm: True
+  residual: True
+gnn:
+  layers_pre_mp: 0
+  layers_post_mp: 2
+  dim_inner: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+optim:
+  optimizer: adam
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 300
+  scheduler: reduce_on_plateau
+  reduce_factor: 0.5
+  schedule_patience: 10
+  min_lr: 1e-6

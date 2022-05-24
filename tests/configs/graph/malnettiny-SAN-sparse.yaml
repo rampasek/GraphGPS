@@ -1,0 +1,62 @@
+out_dir: tests/results
+dataset:
+  format: PyG-MalNetTiny
+  name: LocalDegreeProfile
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: LapPE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: False
+posenc_LapPE:
+  enable: True
+  eigen:
+    laplacian_norm: sym
+    eigvec_norm: L2
+    max_freqs: 10
+  model: DeepSet  # Transformer
+  dim_pe: 16
+  layers: 2
+  n_heads: 4  # Only used when `posenc.model: Transformer`
+  raw_norm_type: none
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: SANTransformer
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: add
+gt:
+  layers: 2
+  n_heads: 4
+  dim_hidden: 48  # `gt.dim_hidden` must match `gnn.dim_inner`
+  full_graph: False  # Run sparse 'GAT'-like attention
+  gamma: 1e-5
+  dropout: 0.0
+  layer_norm: False
+  batch_norm: True
+  residual: True
+gnn:
+  layers_pre_mp: 1
+  layers_post_mp: 3
+  dim_inner: 48  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+optim:
+  optimizer: adam
+  weight_decay: 0.0
+  base_lr: 0.0005
+  max_epoch: 300
+  scheduler: reduce_on_plateau
+  reduce_factor: 0.5
+  schedule_patience: 20
+  min_lr: 1e-5

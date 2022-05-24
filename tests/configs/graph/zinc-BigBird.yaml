@@ -1,0 +1,66 @@
+out_dir: tests/results
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: False
+  project: scratch  # W&B project for debugging runs.
+dataset:
+  format: PyG-ZINC
+  name: subset
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: ZINCNode+LapPE
+  node_encoder_bn: False
+posenc_LapPE:
+  enable: True
+  eigen:
+    laplacian_norm: sym
+    eigvec_norm: L2
+    max_freqs: 10
+  model: DeepSet  # Transformer
+  dim_pe: 8
+  layers: 2
+  n_heads: 4  # Only used when `posenc.model: Transformer`
+  raw_norm_type: none
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+  sampler: full_batch
+model:
+  type: BigBird
+  loss_fun: l1
+  edge_decoding: dot
+  graph_pooling: add
+gt:
+  layers: 10
+  n_heads: 8
+  dim_hidden: 56  # `gt.dim_hidden` must match `gnn.dim_inner`
+  full_graph: True
+  gamma: 1e-5
+  dropout: 0.0
+  layer_norm: False
+  batch_norm: True
+  residual: True
+gnn:
+  head: san_graph
+  layers_pre_mp: 0
+  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
+  dim_inner: 56  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+optim:
+  optimizer: adam
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 1000
+  scheduler: reduce_on_plateau
+  reduce_factor: 0.5
+  schedule_patience: 25
+  min_lr: 1e-6

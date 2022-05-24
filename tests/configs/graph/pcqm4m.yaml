@@ -1,0 +1,47 @@
+out_dir: tests/results
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: True
+  project: scratch  # W&B project for debugging runs.
+dataset:
+  format: OGB
+  name: PCQM4Mv2-full
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom
+  edge_encoder: True
+  edge_encoder_name: Bond
+train:
+  mode: custom
+  batch_size: 256
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: gnn
+  loss_fun: l1
+  edge_decoding: dot
+  graph_pooling: add
+gnn:
+  layers_pre_mp: 0
+  layers_mp: 5
+  layers_post_mp: 1
+  dim_inner: 600
+  layer_type: generalconv
+  stage_type: stack
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: add
+  normalize_adj: False
+optim:
+  optimizer: adam
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 300
+  scheduler: reduce_on_plateau
+  reduce_factor: 0.5
+  schedule_patience: 10
+  min_lr: 1e-5

@@ -1,0 +1,64 @@
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: True
+  project: pcqm4m
+dataset:
+  format: OGB
+  name: PCQM4Mv2-full
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom+SignNet
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+posenc_SignNet:
+  enable: True
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 8
+  model: MLP
+  dim_pe: 8  # Note: In original SignNet codebase dim_pe is always equal to max_freq
+  layers: 8  # Num. layers in \phi model
+  post_layers: 2  # Num. layers in \rho model; The original uses the same as in \phi
+  phi_hidden_dim: 64
+  phi_out_dim: 4
+train:
+  mode: custom
+  batch_size: 256
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: GPSModel
+  loss_fun: l1
+  graph_pooling: mean
+gt:
+  layer_type: CustomGatedGCN+Transformer
+  layers: 5
+  n_heads: 4
+  dim_hidden: 304  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dropout: 0.0
+  attn_dropout: 0.5
+  layer_norm: False
+  batch_norm: True
+gnn:
+  head: san_graph
+  layers_pre_mp: 0
+  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
+  dim_inner: 304  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.0005
+  max_epoch: 100
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

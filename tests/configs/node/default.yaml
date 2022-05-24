@@ -1,0 +1,31 @@
+out_dir: tests/results
+dataset:
+  task: node
+  transductive: True
+  split: [0.8, 0.1, 0.1]
+  split_mode: random
+  transform: none
+train:
+  batch_size: 32
+  eval_period: 20
+  ckpt_period: 100
+model:
+  type: gnn
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: add
+gnn:
+  layers_pre_mp: 3
+  layers_mp: 5
+  layers_post_mp: 3
+  dim_inner: 128
+  layer_type: generalconv
+  stage_type: stack
+  batchnorm: True
+  act: prelu
+  dropout: 0.0
+  agg: add
+  normalize_adj: False
+optim:
+  optimizer: adam
+  base_lr: 0.01

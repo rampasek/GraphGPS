@@ -1,0 +1,66 @@
+out_dir: tests/results
+metric_best: accuracy
+wandb:
+  use: True
+  project: scratch
+dataset:
+  format: OGB
+  name: ogbg-ppa
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: PPANode+LapPE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: PPAEdge
+  edge_encoder_bn: False
+posenc_LapPE:
+  enable: True
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 10
+  model: DeepSet  # Transformer
+  dim_pe: 16
+  layers: 3
+  n_heads: 4  # Only used when `posenc.model: Transformer`
+  raw_norm_type: none
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: GPSModel
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: mean
+gt:
+  layer_type: CustomGatedGCN+Transformer
+  layers: 5
+  n_heads: 8
+  dim_hidden: 256  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dropout: 0.1
+  attn_dropout: 0.5
+  layer_norm: False
+  batch_norm: True
+gnn:
+  head: san_graph
+  layers_pre_mp: 0
+  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
+  dim_inner: 256  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+optim:
+  optimizer: adam
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 300
+  scheduler: reduce_on_plateau
+  reduce_factor: 0.5
+  schedule_patience: 5
+  min_lr: 1e-6

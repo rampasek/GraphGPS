@@ -1,0 +1,67 @@
+out_dir: tests/results
+metric_best: mae
+metric_agg: argmin
+dataset:
+  format: PyG-ZINC
+  name: subset
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: TypeDictNode+SignNet
+  node_encoder_num_types: 28
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: TypeDictEdge
+  edge_encoder_num_types: 4
+  edge_encoder_bn: False
+#posenc_SignNet:
+#  enable: True
+#  eigen:
+#    laplacian_norm: none
+#    eigvec_norm: L2
+#    max_freqs: 37  # Max graph size in ZINC
+#  model: DeepSet
+#  dim_pe: 37  # Note: In original SignNet codebase dim_pe is always equal to max_freq
+#  layers: 8  # Num. layers in \phi model
+#  post_layers: 2  # Num. layers in \rho model; The original uses the same as in \phi
+#  phi_hidden_dim: 64
+#  phi_out_dim: 64
+posenc_SignNet:
+  enable: True
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 8
+  model: MLP
+  dim_pe: 8  # Note: In original SignNet codebase dim_pe is always equal to max_freq
+  layers: 8  # Num. layers in \phi model
+  post_layers: 2  # Num. layers in \rho model; The original uses the same as in \phi
+  phi_hidden_dim: 64
+  phi_out_dim: 4
+train:
+  mode: custom
+  batch_size: 128
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: gnn
+  loss_fun: l1
+  edge_decoding: dot
+  graph_pooling: add
+gnn:
+  layers_pre_mp: 1
+  layers_mp: 2
+  layers_post_mp: 1
+  dim_inner: 300
+  layer_type: generalconv
+  stage_type: stack
+  batchnorm: True
+  act: prelu
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+optim:
+  optimizer: adam
+  base_lr: 0.01
+  max_epoch: 100

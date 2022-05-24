@@ -1,0 +1,23 @@
+#!/bin/bash
+#SBATCH --cpus-per-task=4
+#SBATCH --gres=gpu:1
+#SBATCH --mem=16G
+#SBATCH --time=23:59:00
+
+# Example wrapper, adjust to your system.
+
+date
+hostname
+pwd
+
+conda activate graphgps
+
+cd $SLURM_SUBMIT_DIR
+pwd
+
+echo $@
+eval $@
+
+
+echo "All done in sbatch."
+date
