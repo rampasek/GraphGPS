@@ -70,7 +70,7 @@ To use W&B logging, set `wandb.use True` and have a `gtransformers` entity set-u
 
 
 
-## Unit tests
+### Unit tests
 
 To run all unit tests, execute from the project root directory:
 
@@ -82,4 +82,17 @@ Or specify a particular test module, e.g.:
 
 ```bash
 python -m unittest -v unittests.test_eigvecs
+```
+
+
+## Citation
+
+If you find this work useful, please cite our paper:
+```
+@article{rampasek2022GPS,
+  title={{Recipe for a General, Powerful, Scalable Graph Transformer}}, 
+  author={Ladislav Ramp\'{a}\v{s}ek and Mikhail Galkin and Vijay Prakash Dwivedi and Anh Tuan Luu and Guy Wolf and Dominique Beaini},
+  journal={arXiv:2205.12454},
+  year={2022}
+}
 ```
