@@ -2,6 +2,10 @@ import datetime
 import os
 import torch
 import logging
+from icecream import ic
+from dataclasses import dataclass, make_dataclass, field
+from collections import namedtuple
+import warnings
 
 import graphgps  # noqa, register custom modules
 
@@ -11,7 +15,7 @@ from torch_geometric.graphgym.config import (cfg, dump_cfg,
                                              makedirs_rm_exist)
 from torch_geometric.graphgym.loader import create_loader
 from torch_geometric.graphgym.logger import set_printing
-from torch_geometric.graphgym.optimizer import create_optimizer, \
+from torch_geometric.graphgym.optim import create_optimizer, \
     create_scheduler, OptimizerConfig, SchedulerConfig
 from torch_geometric.graphgym.model_builder import create_model
 from torch_geometric.graphgym.train import train
@@ -90,7 +94,7 @@ def run_loop_settings():
         # 'multi-seed' run mode
         num_iterations = args.repeat
         seeds = [cfg.seed + x for x in range(num_iterations)]
-        split_indices = [cfg.dataset.split_index] * num_iterations
+        split_indices = [cfg.dataset.split_index]*num_iterations
         run_ids = seeds
     else:
         # 'multi-split' run mode
@@ -98,7 +102,7 @@ def run_loop_settings():
             raise NotImplementedError("Running multiple repeats of multiple "
                                       "splits in one run is not supported.")
         num_iterations = len(cfg.run_multiple_splits)
-        seeds = [cfg.seed] * num_iterations
+        seeds = [cfg.seed]*num_iterations
         split_indices = cfg.run_multiple_splits
         run_ids = split_indices
     return run_ids, seeds, split_indices
@@ -136,9 +140,30 @@ if __name__ == '__main__':
         if cfg.train.finetune:
             model = init_model_from_pretrained(model, cfg.train.finetune,
                                                cfg.train.freeze_pretrained)
+
+        new_opt_cfg = new_optimizer_config(cfg)
+
+        # Problem with parsing cfg with create_optimizer<-from_config. Function is searching for a nested
+        # optimizer_config.optimizer attribute. Below a compatibility workaround.
+        new_opt_cfg.__class__ = make_dataclass(
+            'OptimizerConfigExtended', fields=[('optimizer_config', tuple, field(init=False))], bases=(OptimizerConfig,)
+        )
+        new_opt_cfg.optimizer_config = namedtuple('optimizer_config', cfg.optim.keys())(**cfg.optim)
+
+        # End of the workaround
+
         optimizer = create_optimizer(model.parameters(),
-                                     new_optimizer_config(cfg))
-        scheduler = create_scheduler(optimizer, new_scheduler_config(cfg))
+                                     new_opt_cfg)  # new_opt_cfg
+        try:
+            scheduler = create_scheduler(optimizer, new_scheduler_config(cfg))
+        except ValueError as e:
+            scheduler_cfg = SchedulerConfig(steps=cfg.optim.steps, lr_decay=cfg.optim.lr_decay,
+                                            max_epoch=cfg.optim.max_epoch)
+            scheduler = create_scheduler(optimizer, scheduler_cfg)
+            warnings.warn(
+                f'Falling back to default scheduler because of: {e}. Default scheduler: {scheduler_cfg.scheduler}'
+            )
+
         # Print model info
         logging.info(model)
         logging.info(cfg)
