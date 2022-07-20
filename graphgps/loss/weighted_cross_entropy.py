@@ -4,6 +4,7 @@ from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.register import register_loss
 
 
+@register_loss('weighted_cross_entropy')
 def weighted_cross_entropy(pred, true):
     """Weighted cross-entropy for unbalanced classes.
     """
@@ -26,5 +27,3 @@ def weighted_cross_entropy(pred, true):
             loss = F.binary_cross_entropy_with_logits(pred, true.float(),
                                                       weight=weight[true])
             return loss, torch.sigmoid(pred)
-
-register_loss('weighted_cross_entropy', weighted_cross_entropy)

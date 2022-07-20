@@ -75,6 +75,7 @@ def log_loaded_dataset(dataset, format, name):
     #     )
 
 
+@register_loader('custom_master_loader')
 def load_dataset_master(format, name, dataset_dir):
     """
     Master loader that controls loading of all datasets, overshadowing execution
@@ -195,9 +196,6 @@ def load_dataset_master(format, name, dataset_dir):
             dataset[dataset.data['train_graph_index']])
 
     return dataset
-
-
-register_loader('custom_master_loader', load_dataset_master)
 
 
 def compute_indegree_histogram(dataset):

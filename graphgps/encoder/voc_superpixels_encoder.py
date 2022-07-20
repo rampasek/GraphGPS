@@ -15,6 +15,7 @@ Shape of y : [num_nodes]
 VOC_node_input_dim = 14
 # VOC_edge_input_dim = 1 or 2; defined in class VOCEdgeEncoder
 
+@register_node_encoder('VOCNode')
 class VOCNodeEncoder(torch.nn.Module):
     def __init__(self, emb_dim):
         super().__init__()
@@ -27,9 +28,8 @@ class VOCNodeEncoder(torch.nn.Module):
 
         return batch
 
-register_node_encoder('VOCNode', VOCNodeEncoder)
 
-
+@register_edge_encoder('VOCEdge')
 class VOCEdgeEncoder(torch.nn.Module):
     def __init__(self, emb_dim):
         super().__init__()
@@ -41,6 +41,3 @@ class VOCEdgeEncoder(torch.nn.Module):
     def forward(self, batch):
         batch.edge_attr = self.encoder(batch.edge_attr)
         return batch
-
-
-register_edge_encoder('VOCEdge', VOCEdgeEncoder)

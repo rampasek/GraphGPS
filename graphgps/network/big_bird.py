@@ -7,6 +7,7 @@ from torch_geometric.graphgym.register import register_network
 from graphgps.layer.bigbird_layer import BigBirdModel as BackboneBigBird
 
 
+@register_network('BigBird')
 class BigBird(torch.nn.Module):
     """BigBird without edge features.
     This model disregards edge features and runs a linear transformer over a set of node features only.
@@ -43,6 +44,3 @@ class BigBird(torch.nn.Module):
         for module in self.children():
             batch = module(batch)
         return batch
-
-
-register_network('BigBird', BigBird)

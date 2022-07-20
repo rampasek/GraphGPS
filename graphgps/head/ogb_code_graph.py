@@ -5,6 +5,7 @@ from torch_geometric.graphgym import cfg
 from torch_geometric.graphgym.register import register_head
 
 
+@register_head('ogb_code_graph')
 class OGBCodeGraphHead(nn.Module):
     """
     Sequence prediction head for ogbg-code2 graph-level prediction tasks.
@@ -42,6 +43,3 @@ class OGBCodeGraphHead(nn.Module):
 
         pred, label = self._apply_index(batch)
         return pred, label
-
-
-register_head('ogb_code_graph', OGBCodeGraphHead)

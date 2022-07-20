@@ -78,6 +78,7 @@ Edge labels:
 """
 
 
+@register_node_encoder('TypeDictNode')
 class TypeDictNodeEncoder(torch.nn.Module):
     def __init__(self, emb_dim):
         super().__init__()
@@ -97,9 +98,7 @@ class TypeDictNodeEncoder(torch.nn.Module):
         return batch
 
 
-register_node_encoder('TypeDictNode', TypeDictNodeEncoder)
-
-
+@register_edge_encoder('TypeDictEdge')
 class TypeDictEdgeEncoder(torch.nn.Module):
     def __init__(self, emb_dim):
         super().__init__()
@@ -115,6 +114,3 @@ class TypeDictEdgeEncoder(torch.nn.Module):
     def forward(self, batch):
         batch.edge_attr = self.encoder(batch.edge_attr)
         return batch
-
-
-register_edge_encoder('TypeDictEdge', TypeDictEdgeEncoder)

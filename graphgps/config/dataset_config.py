@@ -1,6 +1,7 @@
 from torch_geometric.graphgym.register import register_config
 
 
+@register_config('dataset_cfg')
 def dataset_cfg(cfg):
     """Dataset-specific config options.
     """
@@ -13,5 +14,3 @@ def dataset_cfg(cfg):
 
     # VOC/COCO Superpixels dataset version based on SLIC compactness parameter.
     cfg.dataset.slic_compactness = 10
-
-register_config('dataset_cfg', dataset_cfg)

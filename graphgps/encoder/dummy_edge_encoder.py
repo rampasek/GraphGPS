@@ -2,6 +2,7 @@ import torch
 from torch_geometric.graphgym.register import register_edge_encoder
 
 
+@register_edge_encoder('DummyEdge')
 class DummyEdgeEncoder(torch.nn.Module):
     def __init__(self, emb_dim):
         super().__init__()
@@ -14,6 +15,3 @@ class DummyEdgeEncoder(torch.nn.Module):
         dummy_attr = batch.edge_index.new_zeros(batch.edge_index.shape[1])
         batch.edge_attr = self.encoder(dummy_attr)
         return batch
-
-
-register_edge_encoder('DummyEdge', DummyEdgeEncoder)

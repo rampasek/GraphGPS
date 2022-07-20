@@ -6,6 +6,7 @@ from torch_geometric.graphgym.models.layer import new_layer_config, MLP
 from torch_geometric.graphgym.register import register_head
 
 
+@register_head('inductive_edge')
 class GNNInductiveEdgeHead(nn.Module):
     """ GNN prediction head for inductive edge/link prediction tasks.
 
@@ -152,6 +153,3 @@ class GNNInductiveEdgeHead(nn.Module):
                     'hits@3_list': hits3_list,
                     'hits@10_list': hits10_list,
                     'mrr_list': mrr_list}
-
-
-register_head('inductive_edge', GNNInductiveEdgeHead)

@@ -8,6 +8,7 @@ from torch_geometric.graphgym.register import register_network
 
 from graphgps.layer.gps_layer import GPSLayer
 
+
 class FeatureEncoder(torch.nn.Module):
     """
     Encoding node and edge features
@@ -47,6 +48,7 @@ class FeatureEncoder(torch.nn.Module):
         return batch
 
 
+@register_network('GPSModel')
 class GPSModel(torch.nn.Module):
     """Multi-scale graph x-former.
     """
@@ -92,6 +94,3 @@ class GPSModel(torch.nn.Module):
         for module in self.children():
             batch = module(batch)
         return batch
-
-
-register_network('GPSModel', GPSModel)

@@ -2,6 +2,7 @@ from torch_geometric.graphgym.register import register_config
 from yacs.config import CfgNode as CN
 
 
+@register_config('posenc')
 def set_cfg_posenc(cfg):
     """Extend configuration with positional encoding options.
     """
@@ -45,11 +46,10 @@ def set_cfg_posenc(cfg):
         # a separate variable in the PyG graph batch object.
         pecfg.pass_as_var = False
 
-    
     # Config for EquivStable LapPE
     cfg.posenc_EquivStableLapPE.enable = False
     cfg.posenc_EquivStableLapPE.raw_norm_type = 'none'
-    
+
     # Config for Laplacian Eigen-decomposition for PEs that use it.
     for name in ['posenc_LapPE', 'posenc_SignNet', 'posenc_EquivStableLapPE']:
         pecfg = getattr(cfg, name)
@@ -68,7 +68,6 @@ def set_cfg_posenc(cfg):
     cfg.posenc_SignNet.phi_out_dim = 4
     cfg.posenc_SignNet.phi_hidden_dim = 64
 
-
     for name in ['posenc_RWSE', 'posenc_HKdiagSE', 'posenc_ElstaticSE']:
         pecfg = getattr(cfg, name)
 
@@ -86,6 +85,3 @@ def set_cfg_posenc(cfg):
 
     # Override default, electrostatic kernel has fixed set of 10 measures.
     cfg.posenc_ElstaticSE.kernel.times_func = 'range(10)'
-
-
-register_config('posenc', set_cfg_posenc)

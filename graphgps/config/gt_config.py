@@ -2,6 +2,7 @@ from torch_geometric.graphgym.register import register_config
 from yacs.config import CfgNode as CN
 
 
+@register_config('cfg_gt')
 def set_cfg_gt(cfg):
     """Configuration for Graph Transformer-style models, e.g.:
     - Spectral Attention Network (SAN) Graph Transformer.
@@ -69,6 +70,3 @@ def set_cfg_gt(cfg):
     cfg.gt.bigbird.block_size = 3
 
     cfg.gt.bigbird.layer_norm_eps = 1e-6
-
-
-register_config('cfg_gt', set_cfg_gt)

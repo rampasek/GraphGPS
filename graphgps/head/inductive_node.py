@@ -4,6 +4,7 @@ from torch_geometric.graphgym.models.layer import new_layer_config, MLP
 from torch_geometric.graphgym.register import register_head
 
 
+@register_head('inductive_node')
 class GNNInductiveNodeHead(nn.Module):
     """
     GNN prediction head for inductive node prediction tasks.
@@ -26,6 +27,3 @@ class GNNInductiveNodeHead(nn.Module):
         batch = self.layer_post_mp(batch)
         pred, label = self._apply_index(batch)
         return pred, label
-
-
-register_head('inductive_node', GNNInductiveNodeHead)

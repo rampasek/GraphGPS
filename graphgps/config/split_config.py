@@ -1,6 +1,7 @@
 from torch_geometric.graphgym.register import register_config
 
 
+@register_config('split')
 def set_cfg_split(cfg):
     """Reconfigure the default config value for dataset split options.
 
@@ -20,6 +21,3 @@ def set_cfg_split(cfg):
     # Choose to run multiple splits in one program execution, if set,
     # takes the precedence over cfg.dataset.split_index for split selection
     cfg.run_multiple_splits = []
-
-
-register_config('split', set_cfg_split)

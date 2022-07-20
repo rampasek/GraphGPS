@@ -4,7 +4,7 @@
 [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/recipe-for-a-general-powerful-scalable-graph/graph-regression-on-zinc)](https://paperswithcode.com/sota/graph-regression-on-zinc?p=recipe-for-a-general-powerful-scalable-graph)
 
 
-![HGNet-viz](./GraphGPS.png)
+![GraphGPS-viz](./GraphGPS.png)
 
 How to build a graph Transformer? We provide a 3-part recipe on how to build graph Transformers with linear complexity. Our GPS recipe consists of choosing 3 main ingredients:
 1. positional/structural encoding: [LapPE](https://arxiv.org/abs/2106.03893), [RWSE](https://arxiv.org/abs/2110.07875), [SignNet](https://arxiv.org/abs/2202.13013), [EquivStableLapPE](https://arxiv.org/abs/2203.00199)
@@ -12,7 +12,7 @@ How to build a graph Transformer? We provide a 3-part recipe on how to build gra
 3. global attention mechanism: [Transformer](https://arxiv.org/abs/1706.03762), [Performer](https://arxiv.org/abs/2009.14794), [BigBird](https://arxiv.org/abs/2007.14062)
 
 In this *GraphGPS* package we provide several positional/structural encodings and model choices, implementing the GPS recipe. GraphGPS is built using [PyG](https://www.pyg.org/) and [GraphGym from PyG2](https://pytorch-geometric.readthedocs.io/en/2.0.0/notes/graphgym.html).
-Specifically PyG v2.0.2 is required.
+Specifically *PyG v2.0.4* is required.
 
 
 ### Python environment setup with Conda
@@ -21,16 +21,16 @@ Specifically PyG v2.0.2 is required.
 conda create -n graphgps python=3.9
 conda activate graphgps
 
-conda install pytorch=1.9 torchvision torchaudio -c pytorch -c nvidia
-conda install pyg=2.0.2 -c pyg -c conda-forge
-conda install pandas scikit-learn
+conda install pytorch=1.10 torchvision torchaudio -c pytorch -c nvidia
+conda install pyg=2.0.4 -c pyg -c conda-forge
 
 # RDKit is required for OGB-LSC PCQM4Mv2 and datasets derived from it.  
 conda install openbabel fsspec rdkit -c conda-forge
 
+pip install torchmetrics
 pip install performer-pytorch
-pip install torchmetrics==0.7.2
 pip install ogb
+pip install tensorboardX
 pip install wandb
 
 conda clean --all
@@ -88,7 +88,7 @@ python -m unittest -v unittests.test_eigvecs
 ## Citation
 
 If you find this work useful, please cite our paper:
-```
+```bibtex
 @article{rampasek2022GPS,
   title={{Recipe for a General, Powerful, Scalable Graph Transformer}}, 
   author={Ladislav Ramp\'{a}\v{s}ek and Mikhail Galkin and Vijay Prakash Dwivedi and Anh Tuan Luu and Guy Wolf and Dominique Beaini},

@@ -6,6 +6,7 @@ from torch_geometric.graphgym import cfg
 from torch_geometric.graphgym.register import register_head
 
 
+@register_head('san_graph')
 class SANGraphHead(nn.Module):
     """
     SAN prediction head for graph prediction tasks.
@@ -39,6 +40,3 @@ class SANGraphHead(nn.Module):
         batch.graph_feature = graph_emb
         pred, label = self._apply_index(batch)
         return pred, label
-
-
-register_head('san_graph', SANGraphHead)
