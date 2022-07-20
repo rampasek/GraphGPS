@@ -31,6 +31,7 @@ num_nodeattributes = 10030
 max_depth = 20
 
 
+@register_node_encoder('ASTNode')
 class ASTNodeEncoder(torch.nn.Module):
     """The Abstract Syntax Tree (AST) Node Encoder used for ogbg-code2 dataset.
 
@@ -59,9 +60,7 @@ class ASTNodeEncoder(torch.nn.Module):
         return batch
 
 
-register_node_encoder('ASTNode', ASTNodeEncoder)
-
-
+@register_edge_encoder('ASTEdge')
 class ASTEdgeEncoder(torch.nn.Module):
     """The Abstract Syntax Tree (AST) Edge Encoder used for ogbg-code2 dataset.
 
@@ -84,6 +83,3 @@ class ASTEdgeEncoder(torch.nn.Module):
                     self.embedding_direction(batch.edge_attr[:, 1])
         batch.edge_attr = embedding
         return batch
-
-
-register_edge_encoder('ASTEdge', ASTEdgeEncoder)

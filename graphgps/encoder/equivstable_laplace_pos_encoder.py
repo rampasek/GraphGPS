@@ -4,6 +4,7 @@ from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.register import register_node_encoder
 
 
+@register_node_encoder('EquivStableLapPE')
 class EquivStableLapPENodeEncoder(torch.nn.Module):
     """Equivariant and Stable Laplace Positional Embedding node encoder.
 
@@ -48,6 +49,3 @@ class EquivStableLapPENodeEncoder(torch.nn.Module):
         batch.pe_EquivStableLapPE = pos_enc
 
         return batch
-
-
-register_node_encoder('EquivStableLapPE', EquivStableLapPENodeEncoder)

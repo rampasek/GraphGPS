@@ -4,6 +4,7 @@ from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.register import register_node_encoder
 
 
+@register_node_encoder('LapPE')
 class LapPENodeEncoder(torch.nn.Module):
     """Laplace Positional Embedding node encoder.
 
@@ -139,6 +140,3 @@ class LapPENodeEncoder(torch.nn.Module):
         if self.pass_as_var:
             batch.pe_LapPE = pos_enc
         return batch
-
-
-register_node_encoder('LapPE', LapPENodeEncoder)

@@ -1,97 +1,108 @@
+import logging
 import math
+from typing import Iterator
+from dataclasses import dataclass
 
 import torch.optim as optim
-from torch.optim import Optimizer
-from torch_geometric.graphgym import cfg
-from torch_geometric.graphgym.optimizer import OptimizerConfig, SchedulerConfig
-from torch_geometric.graphgym.register import (register_optimizer,
-                                               register_scheduler)
+from torch.nn import Parameter
+from torch.optim import Adagrad, AdamW, Optimizer
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+
+from torch_geometric.graphgym.optim import SchedulerConfig
+import torch_geometric.graphgym.register as register
 
 
-def optimizer_adagrad(params, optimizer_config: OptimizerConfig):
-    if optimizer_config.optimizer == 'adagrad':
-        optimizer = optim.Adagrad(params, lr=optimizer_config.base_lr,
-                                  weight_decay=optimizer_config.weight_decay)
-        return optimizer
+@register.register_optimizer('adagrad')
+def adagrad_optimizer(params: Iterator[Parameter], base_lr: float,
+                      weight_decay: float) -> Adagrad:
+    return Adagrad(params, lr=base_lr, weight_decay=weight_decay)
 
 
-register_optimizer('adagrad', optimizer_adagrad)
+@register.register_optimizer('adamW')
+def adamW_optimizer(params: Iterator[Parameter], base_lr: float,
+                   weight_decay: float) -> AdamW:
+    return AdamW(params, lr=base_lr, weight_decay=weight_decay)
 
 
-def optimizer_adamW(params, optimizer_config: OptimizerConfig):
-    if optimizer_config.optimizer == 'adamW':
-        optimizer = optim.AdamW(params, lr=optimizer_config.base_lr,
-                                weight_decay=optimizer_config.weight_decay)
-        return optimizer
+
+@dataclass
+class ExtendedSchedulerConfig(SchedulerConfig):
+    reduce_factor: float = 0.5
+    schedule_patience: int = 15
+    min_lr: float = 1e-6
+    num_warmup_epochs: int = 10
+    train_mode: str = 'custom'
+    eval_period: int = 1
 
 
-register_optimizer('adamW', optimizer_adamW)
+@register.register_scheduler('plateau')
+def plateau_scheduler(optimizer: Optimizer, patience: int,
+                      lr_decay: float) -> ReduceLROnPlateau:
+    return ReduceLROnPlateau(optimizer, patience=patience, factor=lr_decay)
 
 
-def scheduler_reduce_on_plateau(optimizer, scheduler_config: SchedulerConfig):
-    if scheduler_config.scheduler == 'reduce_on_plateau':
-        if cfg.train.mode == 'standard':
-            raise ValueError("ReduceLROnPlateau scheduler is not supported "
-                             "by 'standard' graphgym training mode pipeline; "
-                             "try setting config 'train.mode: custom'")
-        if cfg.train.eval_period != 1:
-            raise ValueError("When config train.eval_period is not 1, the "
-                             "optim.schedule_patience of ReduceLROnPlateau "
-                             "doesn't behave as intended.")
-        metric_mode = 'min'
-        # metric_mode = cfg.metric_agg[-3:]
-        # if metric_mode not in ['min', 'max']:
-        #     raise ValueError(f"Failed to automatically infer min or max mode "
-        #                      f"from cfg.metric_agg='{cfg.metric_agg}'")
+@register.register_scheduler('reduce_on_plateau')
+def scheduler_reduce_on_plateau(optimizer: Optimizer, reduce_factor: float,
+                                schedule_patience: int, min_lr: float,
+                                train_mode: str, eval_period: int):
+    if train_mode == 'standard':
+        raise ValueError("ReduceLROnPlateau scheduler is not supported "
+                         "by 'standard' graphgym training mode pipeline; "
+                         "try setting config 'train.mode: custom'")
 
-        scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer=optimizer,
-            mode=metric_mode,
-            factor=cfg.optim.reduce_factor,
-            patience=cfg.optim.schedule_patience,
-            min_lr=cfg.optim.min_lr,
-            verbose=True
-        )
-        if not hasattr(scheduler, 'get_last_lr'):
-            # ReduceLROnPlateau doesn't have `get_last_lr` method as of current
-            # pytorch1.10; we add it here for consistency with other schedulers.
-            def get_last_lr(self):
-                """ Return last computed learning rate by current scheduler.
-                """
-                return self._last_lr
+    if eval_period != 1:
+        logging.warning("When config train.eval_period is not 1, the "
+                        "optim.schedule_patience of ReduceLROnPlateau "
+                        "may not behave as intended.")
 
-            scheduler.get_last_lr = get_last_lr.__get__(scheduler)
-            scheduler._last_lr = [group['lr']
-                                  for group in scheduler.optimizer.param_groups]
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer=optimizer,
+        mode='min',
+        factor=reduce_factor,
+        patience=schedule_patience,
+        min_lr=min_lr,
+        verbose=True
+    )
+    if not hasattr(scheduler, 'get_last_lr'):
+        # ReduceLROnPlateau doesn't have `get_last_lr` method as of current
+        # pytorch1.10; we add it here for consistency with other schedulers.
+        def get_last_lr(self):
+            """ Return last computed learning rate by current scheduler.
+            """
+            return self._last_lr
 
-        return scheduler
+        scheduler.get_last_lr = get_last_lr.__get__(scheduler)
+        scheduler._last_lr = [group['lr']
+                              for group in scheduler.optimizer.param_groups]
+
+    return scheduler
 
 
-register_scheduler('reduce_on_plateau', scheduler_reduce_on_plateau)
+@register.register_scheduler('linear_with_warmup')
+def linear_with_warmup_scheduler(optimizer: Optimizer,
+                                 num_warmup_epochs: int, max_epoch: int):
+    scheduler = get_linear_schedule_with_warmup(
+        optimizer=optimizer,
+        num_warmup_steps=num_warmup_epochs,
+        num_training_steps=max_epoch
+    )
+    return scheduler
 
 
-def scheduler_with_warmup(optimizer, scheduler_config: SchedulerConfig):
-    scheduler = None
-    if scheduler_config.scheduler == 'linear_with_warmup':
-        scheduler = get_linear_schedule_with_warmup(
-            optimizer=optimizer,
-            num_warmup_steps=cfg.optim.num_warmup_epochs,
-            num_training_steps=scheduler_config.max_epoch
-        )
-    elif scheduler_config.scheduler == 'cosine_with_warmup':
-        scheduler = get_cosine_schedule_with_warmup(
-            optimizer=optimizer,
-            num_warmup_steps=cfg.optim.num_warmup_epochs,
-            num_training_steps=scheduler_config.max_epoch
-        )
-    if scheduler is not None:
-        return scheduler
-
-register_scheduler('scheduler_with_warmup', scheduler_with_warmup)
+@register.register_scheduler('cosine_with_warmup')
+def cosine_with_warmup_scheduler(optimizer: Optimizer,
+                                 num_warmup_epochs: int, max_epoch: int):
+    scheduler = get_cosine_schedule_with_warmup(
+        optimizer=optimizer,
+        num_warmup_steps=num_warmup_epochs,
+        num_training_steps=max_epoch
+    )
+    return scheduler
 
 
-def get_linear_schedule_with_warmup(optimizer, num_warmup_steps,
-                                    num_training_steps, last_epoch=-1):
+def get_linear_schedule_with_warmup(
+        optimizer: Optimizer, num_warmup_steps: int, num_training_steps: int,
+        last_epoch: int = -1):
     """
     Implementation by Huggingface:
     https://github.com/huggingface/transformers/blob/v4.16.2/src/transformers/optimization.py

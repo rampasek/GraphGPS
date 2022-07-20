@@ -1,15 +1,13 @@
+import logging
+import time
+
 import numpy as np
 import torch
-import time
-import logging
-
+from torch_geometric.graphgym.checkpoint import load_ckpt, save_ckpt, clean_ckpt
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.loss import compute_loss
-from torch_geometric.graphgym.utils.epoch import is_eval_epoch, is_ckpt_epoch
-from torch_geometric.graphgym.checkpoint import load_ckpt, save_ckpt, \
-    clean_ckpt
-
 from torch_geometric.graphgym.register import register_train
+from torch_geometric.graphgym.utils.epoch import is_eval_epoch, is_ckpt_epoch
 
 from graphgps.loss.subtoken_prediction_loss import subtoken_cross_entropy
 from graphgps.utils import cfg_to_dict, flatten_dict, make_wandb_name
@@ -78,6 +76,7 @@ def eval_epoch(logger, loader, model, split='val'):
         time_start = time.time()
 
 
+@register_train('custom')
 def custom_train(loggers, loaders, model, optimizer, scheduler):
     """
     Customized training pipeline.
@@ -92,11 +91,12 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
     """
     start_epoch = 0
     if cfg.train.auto_resume:
-        start_epoch = load_ckpt(model, optimizer, scheduler)
+        start_epoch = load_ckpt(model, optimizer, scheduler,
+                                cfg.train.epoch_resume)
     if start_epoch == cfg.optim.max_epoch:
         logging.info('Checkpoint found, Task already done')
     else:
-        logging.info('Start from epoch {}'.format(start_epoch))
+        logging.info('Start from epoch %s', start_epoch)
 
     if cfg.wandb.use:
         try:
@@ -200,6 +200,4 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
         run.finish()
         run = None
 
-    logging.info('Task done, results saved in {}'.format(cfg.run_dir))
-
-register_train('custom', custom_train)
+    logging.info('Task done, results saved in %s', cfg.run_dir)

@@ -172,6 +172,7 @@ class MaskedGINDeepSigns(nn.Module):
         return x
 
 
+@register_node_encoder('SignNet')
 class SignNetNodeEncoder(torch.nn.Module):
     """SignNet Positional Embedding node encoder.
     https://arxiv.org/abs/2202.13013
@@ -275,6 +276,3 @@ class SignNetNodeEncoder(torch.nn.Module):
         if self.pass_as_var:
             batch.pe_SignNet = pos_enc
         return batch
-
-
-register_node_encoder('SignNet', SignNetNodeEncoder)

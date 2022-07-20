@@ -1,5 +1,3 @@
-import logging
-
 import torch
 import torch.nn as nn
 from torch_geometric.graphgym.config import cfg
@@ -103,25 +101,22 @@ class KernelPENodeEncoder(torch.nn.Module):
         return batch
 
 
+@register_node_encoder('RWSE')
 class RWSENodeEncoder(KernelPENodeEncoder):
     """Random Walk Structural Encoding node encoder.
     """
     kernel_type = 'RWSE'
 
-register_node_encoder('RWSE', RWSENodeEncoder)
 
-
+@register_node_encoder('HKdiagSE')
 class HKdiagSENodeEncoder(KernelPENodeEncoder):
     """Heat kernel (diagonal) Structural Encoding node encoder.
     """
     kernel_type = 'HKdiagSE'
 
-register_node_encoder('HKdiagSE', HKdiagSENodeEncoder)
 
-
+@register_node_encoder('ElstaticSE')
 class ElstaticSENodeEncoder(KernelPENodeEncoder):
     """Electrostatic interactions Structural Encoding node encoder.
     """
     kernel_type = 'ElstaticSE'
-
-register_node_encoder('ElstaticSE', ElstaticSENodeEncoder)

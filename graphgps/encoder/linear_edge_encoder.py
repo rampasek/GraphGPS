@@ -3,6 +3,7 @@ from torch_geometric.graphgym import cfg
 from torch_geometric.graphgym.register import register_edge_encoder
 
 
+@register_edge_encoder('LinearEdge')
 class LinearEdgeEncoder(torch.nn.Module):
     def __init__(self, emb_dim):
         super().__init__()
@@ -16,6 +17,3 @@ class LinearEdgeEncoder(torch.nn.Module):
     def forward(self, batch):
         batch.edge_attr = self.encoder(batch.edge_attr.view(-1, self.in_dim))
         return batch
-
-
-register_edge_encoder('LinearEdge', LinearEdgeEncoder)

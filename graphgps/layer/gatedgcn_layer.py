@@ -133,6 +133,7 @@ class GatedGCNLayer(pyg_nn.conv.MessagePassing):
         return x, e_out
 
 
+@register_layer('gatedgcnconv')
 class GatedGCNGraphGymLayer(nn.Module):
     """GatedGCN layer.
     Residual Gated Graph ConvNets
@@ -148,6 +149,3 @@ class GatedGCNGraphGymLayer(nn.Module):
 
     def forward(self, batch):
         return self.model(batch)
-
-
-register_layer('gatedgcnconv', GatedGCNGraphGymLayer)

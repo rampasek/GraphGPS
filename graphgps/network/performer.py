@@ -7,6 +7,7 @@ from torch_geometric.graphgym.register import register_network
 from graphgps.layer.performer_layer import Performer as BackbonePerformer
 
 
+@register_network('Performer')
 class Performer(torch.nn.Module):
     """Performer without edge features.
     This model disregards edge features and runs a linear transformer over a set of node features only.
@@ -40,6 +41,3 @@ class Performer(torch.nn.Module):
         for module in self.children():
             batch = module(batch)
         return batch
-
-
-register_network('Performer', Performer)

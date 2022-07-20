@@ -8,6 +8,7 @@ from graphgps.layer.san_layer import SANLayer
 from graphgps.layer.san2_layer import SAN2Layer
 
 
+@register_network('SANTransformer')
 class SANTransformer(torch.nn.Module):
     """Spectral Attention Network (SAN) Graph Transformer.
     https://arxiv.org/abs/2106.03893
@@ -53,6 +54,3 @@ class SANTransformer(torch.nn.Module):
         for module in self.children():
             batch = module(batch)
         return batch
-
-
-register_network('SANTransformer', SANTransformer)

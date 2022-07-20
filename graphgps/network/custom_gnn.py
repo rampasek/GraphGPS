@@ -9,6 +9,7 @@ from graphgps.layer.gatedgcn_layer import GatedGCNLayer
 from graphgps.layer.gine_conv_layer import GINEConvLayer
 
 
+@register_network('custom_gnn')
 class CustomGNN(torch.nn.Module):
     """
     GNN model that customizes the torch_geometric.graphgym.models.gnn.GNN
@@ -52,6 +53,3 @@ class CustomGNN(torch.nn.Module):
         for module in self.children():
             batch = module(batch)
         return batch
-
-
-register_network('custom_gnn', CustomGNN)
