@@ -27,8 +27,7 @@ def extended_cfg(cfg):
     # Additional name tag used in `run_dir` and `wandb_name` auto generation.
     cfg.name_tag = ""
 
-    # Directory path to a saved experiment, if set, take the model from there
-    # and fine-tune it on a new dataset.
-    cfg.train.finetune = ""
-    # Freeze the pretrained part of the network, learning only the new head
-    cfg.train.freeze_pretrained = False
+    # In training, if True (and also cfg.train.enable_ckpt is True) then
+    # always checkpoint the current best model based on validation performance,
+    # instead, when False, follow cfg.train.eval_period checkpointing frequency.
+    cfg.train.ckpt_best = False

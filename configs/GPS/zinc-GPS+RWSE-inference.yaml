@@ -1,0 +1,38 @@
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: False
+  project: scratch  # W&B project for debugging runs.
+dataset:
+  format: PyG-ZINC
+  name: subset
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: TypeDictNode+RWSE
+  node_encoder_num_types: 28
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: TypeDictEdge
+  edge_encoder_num_types: 4
+  edge_encoder_bn: False
+pretrained:
+  dir: pretrained/zinc-GPS+RWSE-ckptbest
+  reset_prediction_head: False
+train:
+  mode: inference-only
+  batch_size: 32
+model:
+  type: GPSModel
+  loss_fun: l1
+  edge_decoding: dot
+  graph_pooling: add
+gnn:
+  head: san_graph
+  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean

@@ -129,7 +129,7 @@ if __name__ == '__main__':
         cfg.run_id = run_id
         seed_everything(cfg.seed)
         auto_select_device()
-        if cfg.train.finetune:
+        if cfg.pretrained.dir:
             cfg = load_pretrained_model_cfg(cfg)
         logging.info(f"[*] Run ID {run_id}: seed={cfg.seed}, "
                      f"split_index={cfg.dataset.split_index}")
@@ -138,9 +138,11 @@ if __name__ == '__main__':
         loaders = create_loader()
         loggers = create_logger()
         model = create_model()
-        if cfg.train.finetune:
-            model = init_model_from_pretrained(model, cfg.train.finetune,
-                                               cfg.train.freeze_pretrained)
+        if cfg.pretrained.dir:
+            model = init_model_from_pretrained(
+                model, cfg.pretrained.dir, cfg.pretrained.freeze_main,
+                cfg.pretrained.reset_prediction_head
+            )
         optimizer = create_optimizer(model.parameters(),
                                      new_optimizer_config(cfg))
         scheduler = create_scheduler(optimizer, new_scheduler_config(cfg))
@@ -159,7 +161,10 @@ if __name__ == '__main__':
             train_dict[cfg.train.mode](loggers, loaders, model, optimizer,
                                        scheduler)
     # Aggregate results from different seeds
-    agg_runs(cfg.out_dir, cfg.metric_best)
+    try:
+        agg_runs(cfg.out_dir, cfg.metric_best)
+    except Exception as e:
+        logging.info(f"Failed when trying to aggregate multiple runs: {e}")
     # When being launched in batch mode, mark a yaml as done
     if args.mark_done:
         os.rename(args.cfg_file, f'{args.cfg_file}_done')
