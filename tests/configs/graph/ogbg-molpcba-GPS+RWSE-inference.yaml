@@ -1,0 +1,36 @@
+out_dir: results
+metric_best: ap
+wandb:
+  use: True
+  project: molpcba
+dataset:
+  format: OGB
+  name: ogbg-molpcba
+  task: graph
+  task_type: classification_multilabel
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+pretrained:
+  dir: pretrained/ogbg-molpcba-GPS+RWSE
+  reset_prediction_head: False
+train:
+  mode: inference-only
+  batch_size: 512
+model:
+  type: GPSModel
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: mean
+gnn:
+  head: default
+  layers_pre_mp: 0
+  layers_post_mp: 1
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
