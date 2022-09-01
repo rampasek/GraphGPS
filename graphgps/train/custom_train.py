@@ -136,7 +136,9 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
         else:
             scheduler.step()
         full_epoch_times.append(time.perf_counter() - start_time)
-        if is_ckpt_epoch(cur_epoch):
+        # Checkpoint with regular frequency (if enabled).
+        if cfg.train.enable_ckpt and not cfg.train.ckpt_best \
+                and is_ckpt_epoch(cur_epoch):
             save_ckpt(model, optimizer, scheduler, cur_epoch)
 
         if cfg.wandb.use:
@@ -174,6 +176,12 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
                     run.log(bstats, step=cur_epoch)
                     run.summary["full_epoch_time_avg"] = np.mean(full_epoch_times)
                     run.summary["full_epoch_time_sum"] = np.sum(full_epoch_times)
+            # Checkpoint the best epoch params (if enabled).
+            if cfg.train.enable_ckpt and cfg.train.ckpt_best and \
+                    best_epoch == cur_epoch:
+                save_ckpt(model, optimizer, scheduler, cur_epoch)
+                if cfg.train.ckpt_clean:  # Delete old ckpt each time.
+                    clean_ckpt()
             logging.info(
                 f"> Epoch {cur_epoch}: took {full_epoch_times[-1]:.1f}s "
                 f"(avg {np.mean(full_epoch_times):.1f}s) | "
@@ -201,3 +209,54 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
         run = None
 
     logging.info('Task done, results saved in %s', cfg.run_dir)
+
+
+@register_train('inference-only')
+def inference_only(loggers, loaders, model, optimizer=None, scheduler=None):
+    """
+    Customized pipeline to run inference only.
+
+    Args:
+        loggers: List of loggers
+        loaders: List of loaders
+        model: GNN model
+        optimizer: Unused, exists just for API compatibility
+        scheduler: Unused, exists just for API compatibility
+    """
+    num_splits = len(loggers)
+    split_names = ['train', 'val', 'test']
+    perf = [[] for _ in range(num_splits)]
+    cur_epoch = 0
+    start_time = time.perf_counter()
+
+    for i in range(0, num_splits):
+        eval_epoch(loggers[i], loaders[i], model,
+                   split=split_names[i])
+        perf[i].append(loggers[i].write_epoch(cur_epoch))
+    val_perf = perf[1]
+
+    best_epoch = np.array([vp['loss'] for vp in val_perf]).argmin()
+    best_train = best_val = best_test = ""
+    if cfg.metric_best != 'auto':
+        # Select again based on val perf of `cfg.metric_best`.
+        m = cfg.metric_best
+        best_epoch = getattr(np.array([vp[m] for vp in val_perf]),
+                             cfg.metric_agg)()
+        if m in perf[0][best_epoch]:
+            best_train = f"train_{m}: {perf[0][best_epoch][m]:.4f}"
+        else:
+            # Note: For some datasets it is too expensive to compute
+            # the main metric on the training set.
+            best_train = f"train_{m}: {0:.4f}"
+        best_val = f"val_{m}: {perf[1][best_epoch][m]:.4f}"
+        best_test = f"test_{m}: {perf[2][best_epoch][m]:.4f}"
+
+    logging.info(
+        f"> Inference | "
+        f"train_loss: {perf[0][best_epoch]['loss']:.4f} {best_train}\t"
+        f"val_loss: {perf[1][best_epoch]['loss']:.4f} {best_val}\t"
+        f"test_loss: {perf[2][best_epoch]['loss']:.4f} {best_test}"
+    )
+    logging.info(f'Done! took: {time.perf_counter() - start_time:.2f}s')
+    for logger in loggers:
+        logger.close()

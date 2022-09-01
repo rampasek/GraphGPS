@@ -46,7 +46,7 @@ def set_new_cfg_allowed(config, is_new_allowed):
 
 
 def load_pretrained_model_cfg(cfg):
-    pretrained_cfg_fname = osp.join(cfg.train.finetune, 'config.yaml')
+    pretrained_cfg_fname = osp.join(cfg.pretrained.dir, 'config.yaml')
     if not os.path.isfile(pretrained_cfg_fname):
         FileNotFoundError(f"Pretrained model config not found: "
                           f"{pretrained_cfg_fname}")
@@ -96,23 +96,28 @@ def load_pretrained_model_cfg(cfg):
     return cfg
 
 
-def init_model_from_pretrained(model, pretrained_dir, freeze_pretrained=False):
+def init_model_from_pretrained(model, pretrained_dir,
+                               freeze_main=False, reset_prediction_head=True):
     """ Copy model parameters from pretrained model except the prediction head.
 
     Args:
         model: Initialized model with random weights.
         pretrained_dir: Root directory of saved pretrained model.
-        freeze_pretrained: If True, do not finetune the loaded pretrained
-            parameters, train the prediction head only. If False, train all.
+        freeze_main: If True, do not finetune the loaded pretrained parameters
+            of the `main body` (train the prediction head only), else train all.
+        reset_prediction_head: If True, reset parameters of the prediction head,
+            else keep the pretrained weights.
 
     Returns:
         Updated pytorch model object.
     """
+    from torch_geometric.graphgym.checkpoint import MODEL_STATE
+
     ckpt_file = get_final_pretrained_ckpt(osp.join(pretrained_dir, '0', 'ckpt'))
     logging.info(f"[*] Loading from pretrained model: {ckpt_file}")
 
     ckpt = torch.load(ckpt_file)
-    pretrained_dict = ckpt['model_state']
+    pretrained_dict = ckpt[MODEL_STATE]
     model_dict = model.state_dict()
 
     # print('>>>> pretrained dict: ')
@@ -120,15 +125,16 @@ def init_model_from_pretrained(model, pretrained_dir, freeze_pretrained=False):
     # print('>>>> model dict: ')
     # print(model_dict.keys())
 
-    # Filter out prediction head parameter keys.
-    pretrained_dict = {k: v for k, v in pretrained_dict.items()
-                       if not k.startswith('post_mp')}
+    if reset_prediction_head:
+        # Filter out prediction head parameter keys.
+        pretrained_dict = {k: v for k, v in pretrained_dict.items()
+                           if not k.startswith('post_mp')}
     # Overwrite entries in the existing state dict.
     model_dict.update(pretrained_dict)
     # Load the new state dict.
     model.load_state_dict(model_dict)
 
-    if freeze_pretrained:
+    if freeze_main:
         for key, param in model.named_parameters():
             if not key.startswith('post_mp'):
                 param.requires_grad = False

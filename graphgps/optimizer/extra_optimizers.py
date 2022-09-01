@@ -75,6 +75,17 @@ def scheduler_reduce_on_plateau(optimizer: Optimizer, reduce_factor: float,
         scheduler._last_lr = [group['lr']
                               for group in scheduler.optimizer.param_groups]
 
+    def modified_state_dict(ref):
+        """Returns the state of the scheduler as a :class:`dict`.
+        Additionally modified to ignore 'get_last_lr', 'state_dict'.
+        Including these entries in the state dict would cause issues when
+        loading a partially trained / pretrained model from a checkpoint.
+        """
+        return {key: value for key, value in ref.__dict__.items()
+                if key not in ['sparsifier', 'get_last_lr', 'state_dict']}
+
+    scheduler.state_dict = modified_state_dict.__get__(scheduler)
+
     return scheduler
 
 
