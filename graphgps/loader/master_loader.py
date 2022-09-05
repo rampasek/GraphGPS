@@ -14,7 +14,10 @@ from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.loader import load_pyg, load_ogb, set_dataset_attr
 from torch_geometric.graphgym.register import register_loader
 
+from graphgps.loader.dataset.aqsol_molecules import AQSOL
+from graphgps.loader.dataset.coco_superpixels import COCOSuperpixels
 from graphgps.loader.dataset.malnet_tiny import MalNetTiny
+from graphgps.loader.dataset.voc_superpixels import VOCSuperpixels
 from graphgps.loader.split_generator import (prepare_splits,
                                              set_dataset_splits)
 from graphgps.transform.posenc_stats import compute_posenc_stats
@@ -109,6 +112,15 @@ def load_dataset_master(format, name, dataset_dir):
         elif pyg_dataset_id == 'TUDataset':
             dataset = preformat_TUDataset(dataset_dir, name)
 
+        elif pyg_dataset_id == 'VOCSuperpixels':
+            dataset = preformat_VOCSuperpixels(dataset_dir, name,
+                                               cfg.dataset.slic_compactness)
+
+        elif pyg_dataset_id == 'COCOSuperpixels':
+            dataset = preformat_COCOSuperpixels(dataset_dir, name,
+                                                cfg.dataset.slic_compactness)
+
+
         elif pyg_dataset_id == 'WikipediaNetwork':
             if name == 'crocodile':
                 raise NotImplementedError(f"crocodile not implemented yet")
@@ -116,6 +128,9 @@ def load_dataset_master(format, name, dataset_dir):
 
         elif pyg_dataset_id == 'ZINC':
             dataset = preformat_ZINC(dataset_dir, name)
+            
+        elif pyg_dataset_id == 'AQSOL':
+            dataset = preformat_AQSOL(dataset_dir, name)
 
         else:
             raise ValueError(f"Unexpected PyG Dataset identifier: {format}")
@@ -132,6 +147,9 @@ def load_dataset_master(format, name, dataset_dir):
             subset = name.split('-', 1)[1]
             dataset = preformat_OGB_PCQM4Mv2(dataset_dir, subset)
 
+        elif name.startswith('peptides-'):
+            dataset = preformat_Peptides(dataset_dir, name)
+
         ### Link prediction datasets.
         elif name.startswith('ogbl-'):
             # GraphGym default loader.
@@ -144,6 +162,9 @@ def load_dataset_master(format, name, dataset_dir):
             convert_to_int(dataset, 'train_edge_label')
             convert_to_int(dataset, 'val_edge_label')
             convert_to_int(dataset, 'test_edge_label')
+
+        elif name.startswith('PCQM4Mv2Contact-'):
+            dataset = preformat_PCQM4Mv2Contact(dataset_dir, name)
 
         else:
             raise ValueError(f"Unsupported OGB(-derived) dataset: {name}")
@@ -354,7 +375,7 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
         # Load locally to avoid RDKit dependency until necessary.
         from ogb.lsc import PygPCQM4Mv2Dataset
     except Exception as e:
-        logging.error('ERROR: Failed to load PygPCQM4Mv2Dataset, '
+        logging.error('ERROR: Failed to import PygPCQM4Mv2Dataset, '
                       'make sure RDKit is installed.')
         raise e
 
@@ -387,6 +408,73 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
     else:
         raise ValueError(f'Unexpected OGB PCQM4Mv2 subset choice: {name}')
     dataset.split_idxs = split_idxs
+    return dataset
+
+
+def preformat_PCQM4Mv2Contact(dataset_dir, name):
+    """Load PCQM4Mv2-derived molecular contact link prediction dataset.
+
+    Note: This dataset requires RDKit dependency!
+
+    Args:
+       dataset_dir: path where to store the cached dataset
+       name: the type of dataset split: 'shuffle', 'num-atoms'
+
+    Returns:
+       PyG dataset object
+    """
+    try:
+        # Load locally to avoid RDKit dependency until necessary
+        from graphgps.loader.dataset.pcqm4mv2_contact import \
+            PygPCQM4Mv2ContactDataset, \
+            structured_neg_sampling_transform
+    except Exception as e:
+        logging.error('ERROR: Failed to import PygPCQM4Mv2ContactDataset, '
+                      'make sure RDKit is installed.')
+        raise e
+
+    split_name = name.split('-', 1)[1]
+    dataset = PygPCQM4Mv2ContactDataset(dataset_dir, subset='530k')
+    # Inductive graph-level split (there is no train/test edge split).
+    s_dict = dataset.get_idx_split(split_name)
+    dataset.split_idxs = [s_dict[s] for s in ['train', 'val', 'test']]
+    if cfg.dataset.resample_negative:
+        dataset.transform = structured_neg_sampling_transform
+    return dataset
+
+
+def preformat_Peptides(dataset_dir, name):
+    """Load Peptides dataset, functional or structural.
+
+    Note: This dataset requires RDKit dependency!
+
+    Args:
+        dataset_dir: path where to store the cached dataset
+        name: the type of dataset split:
+            - 'peptides-functional' (10-task classification)
+            - 'peptides-structural' (11-task regression)
+
+    Returns:
+        PyG dataset object
+    """
+    try:
+        # Load locally to avoid RDKit dependency until necessary.
+        from graphgps.loader.dataset.peptides_functional import \
+            PeptidesFunctionalDataset
+        from graphgps.loader.dataset.peptides_structural import \
+            PeptidesStructuralDataset
+    except Exception as e:
+        logging.error('ERROR: Failed to import Peptides dataset class, '
+                      'make sure RDKit is installed.')
+        raise e
+
+    dataset_type = name.split('-', 1)[1]
+    if dataset_type == 'functional':
+        dataset = PeptidesFunctionalDataset(dataset_dir)
+    elif dataset_type == 'structural':
+        dataset = PeptidesStructuralDataset(dataset_dir)
+    s_dict = dataset.get_idx_split()
+    dataset.split_idxs = [s_dict[s] for s in ['train', 'val', 'test']]
     return dataset
 
 
@@ -424,6 +512,56 @@ def preformat_ZINC(dataset_dir, name):
         raise ValueError(f"Unexpected subset choice for ZINC dataset: {name}")
     dataset = join_dataset_splits(
         [ZINC(root=dataset_dir, subset=(name == 'subset'), split=split)
+         for split in ['train', 'val', 'test']]
+    )
+    return dataset
+
+
+def preformat_AQSOL(dataset_dir):
+    """Load and preformat AQSOL datasets.
+
+    Args:
+        dataset_dir: path where to store the cached dataset
+
+    Returns:
+        PyG dataset object
+    """
+    dataset = join_dataset_splits(
+        [AQSOL(root=dataset_dir, split=split)
+         for split in ['train', 'val', 'test']]
+    )
+    return dataset
+
+
+def preformat_VOCSuperpixels(dataset_dir, name, slic_compactness):
+    """Load and preformat VOCSuperpixels dataset.
+
+    Args:
+        dataset_dir: path where to store the cached dataset
+    Returns:
+        PyG dataset object
+    """
+    dataset = join_dataset_splits(
+        [VOCSuperpixels(root=dataset_dir, name=name,
+                        slic_compactness=slic_compactness,
+                        split=split)
+         for split in ['train', 'val', 'test']]
+    )
+    return dataset
+
+
+def preformat_COCOSuperpixels(dataset_dir, name, slic_compactness):
+    """Load and preformat COCOSuperpixels dataset.
+
+    Args:
+        dataset_dir: path where to store the cached dataset
+    Returns:
+        PyG dataset object
+    """
+    dataset = join_dataset_splits(
+        [COCOSuperpixels(root=dataset_dir, name=name,
+                         slic_compactness=slic_compactness,
+                         split=split)
          for split in ['train', 'val', 'test']]
     )
     return dataset
