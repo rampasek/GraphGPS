@@ -1,0 +1,68 @@
+out_dir: results
+metric_best: f1
+wandb:
+  use: True
+  project: gtblueprint
+dataset:
+  format: PyG-VOCSuperpixels
+  name: edge_wt_region_boundary
+  slic_compactness: 30
+  task: graph     # Even if VOC is node-level task, this needs to be set as 'graph'
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: VOCNode+LapPE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: VOCEdge
+  edge_encoder_bn: False
+posenc_LapPE:
+  enable: True
+  eigen:
+    laplacian_norm: sym
+    eigvec_norm: L2
+    max_freqs: 10
+  model: Transformer  # DeepSet
+  dim_pe: 16
+  layers: 2
+  n_heads: 4  # Only used when `posenc.model: Transformer`
+  raw_norm_type: none
+train:
+  mode: custom
+  batch_size: 8  # 4 is max batch size able to run for 380k SAN-full on 12GB GPU
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: SANTransformer
+  loss_fun: weighted_cross_entropy
+  edge_decoding: dot
+gt:
+  layers: 4
+  n_heads: 8
+  dim_hidden: 88  # `gt.dim_hidden` must match `gnn.dim_inner`
+  full_graph: True
+  gamma: 1e-1
+  dropout: 0.0
+  layer_norm: False
+  batch_norm: True
+  residual: True
+gnn:
+  head: inductive_node
+  layers_pre_mp: 0
+  layers_post_mp: 3
+  dim_inner: 88  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+optim:
+  batch_accumulation: 4
+  optimizer: adam
+  weight_decay: 0.0
+  base_lr: 0.0005
+  max_epoch: 500
+  scheduler: reduce_on_plateau
+  reduce_factor: 0.5
+  schedule_patience: 20
+  min_lr: 1e-5
