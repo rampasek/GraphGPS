@@ -8,10 +8,9 @@ import torch
 from joblib import Parallel, delayed
 from ogb.utils.features import atom_to_feature_vector, bond_to_feature_vector
 from ogb.utils.torch_util import replace_numpy_with_torchtensor
-from ogb.utils.url import decide_download, download_url
+from ogb.utils.url import decide_download, download_url as ogb_download_url
 from rdkit.Chem.AllChem import MolFromSmiles
-from torch_geometric.data import Data
-from torch_geometric.data import InMemoryDataset
+from torch_geometric.data import Data, InMemoryDataset, download_url
 from torch_geometric.graphgym.models.transform import create_link_label
 from torch_geometric.utils import to_undirected, negative_sampling
 from tqdm import tqdm
@@ -336,7 +335,7 @@ class PygPCQM4Mv2ContactDataset(InMemoryDataset):
 
     def download(self):
         if decide_download(self.url):
-            path = download_url(self.url, self.raw_dir)
+            path = ogb_download_url(self.url, self.raw_dir)
             # Save to disk the MD5 hash of the downloaded file.
             hash = self._md5sum(path)
             if hash != self.version:
