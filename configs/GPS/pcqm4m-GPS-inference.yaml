@@ -1,0 +1,34 @@
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: False
+  project: scratch  # W&B project for debugging runs.
+dataset:
+  format: OGB
+  name: PCQM4Mv2-full
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+pretrained:
+  dir: pretrained/pcqm4m-GPS+RWSE.medium
+  reset_prediction_head: False
+train:
+  mode: inference-only
+  batch_size: 256
+model:
+  type: GPSModel
+  loss_fun: l1
+  graph_pooling: mean
+gnn:
+  head: san_graph
+  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
