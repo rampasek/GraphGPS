@@ -5,8 +5,8 @@ wandb:
   project: Pascal
 dataset:
   format: PyG-VOCSuperpixels
-  name: edge_wt_only_coord  # Alternative: edge_wt_region_boundary
-  slic_compactness: 10
+  name: edge_wt_region_boundary
+  slic_compactness: 30
   task: graph  # Even if VOC is node-level task, this needs to be set as 'graph'
   task_type: classification
   transductive: False
