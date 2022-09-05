@@ -1,0 +1,72 @@
+out_dir: results
+metric_best: f1
+wandb:
+  use: True
+  project: COCO
+dataset:
+  format: PyG-COCOSuperpixels
+  name: edge_wt_region_boundary
+  slic_compactness: 30
+  task: graph  # Even if VOC is node-level task, this needs to be set as 'graph'
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: VOCNode+LapPE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: VOCEdge
+  edge_encoder_bn: False
+posenc_LapPE:
+  enable: True
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 10
+  model: DeepSet
+  dim_pe: 16
+  layers: 2
+  raw_norm_type: none
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: GPSModel
+  loss_fun: weighted_cross_entropy
+gt:
+  layer_type: CustomGatedGCN+Transformer  #Performer
+  layers: 4
+  n_heads: 8
+  dim_hidden: 96  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dropout: 0.0
+  attn_dropout: 0.5
+  layer_norm: False
+  batch_norm: True
+gnn:
+  head: inductive_node
+  layers_pre_mp: 0
+  layers_post_mp: 3
+  dim_inner: 96  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.0005
+  max_epoch: 300
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
+#optim:
+#  optimizer: adamW
+#  weight_decay: 0.0
+#  base_lr: 0.0005
+#  max_epoch: 200
+#  scheduler: reduce_on_plateau
+#  reduce_factor: 0.5
+#  schedule_patience: 10
+#  min_lr: 1e-5

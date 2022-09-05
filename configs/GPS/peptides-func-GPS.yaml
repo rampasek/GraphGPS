@@ -1,0 +1,70 @@
+out_dir: results
+metric_best: ap
+wandb:
+  use: True
+  project: peptides-func
+dataset:
+  format: OGB
+  name: peptides-functional
+  task: graph
+  task_type: classification_multilabel
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom+LapPE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+posenc_LapPE:
+  enable: True
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 10
+  model: DeepSet
+  dim_pe: 16
+  layers: 2
+  raw_norm_type: none
+train:
+  mode: custom
+  batch_size: 128
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: GPSModel
+  loss_fun: cross_entropy
+  graph_pooling: mean
+gt:
+  layer_type: CustomGatedGCN+Transformer
+  layers: 4
+  n_heads: 4
+  dim_hidden: 96  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dropout: 0.0
+  attn_dropout: 0.5
+  layer_norm: False
+  batch_norm: True
+gnn:
+  head: default
+  layers_pre_mp: 0
+  layers_post_mp: 1  # Not used when `gnn.head: san_graph`
+  dim_inner: 96  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.0003
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
+#optim:
+#  optimizer: adamW
+#  weight_decay: 0.0
+#  base_lr: 0.0003
+#  max_epoch: 500
+#  scheduler: reduce_on_plateau
+#  reduce_factor: 0.5
+#  schedule_patience: 20
+#  min_lr: 1e-5
