@@ -1,5 +1,5 @@
 out_dir: results
-metric_best: accuracy
+metric_best: accuracy-SBM
 wandb:
   use: True
   project: CLUSTER
@@ -59,7 +59,7 @@ optim:
   clip_grad_norm: True
   optimizer: adamW
   weight_decay: 1e-5
-  base_lr: 0.001
+  base_lr: 0.0005
   max_epoch: 100
   scheduler: cosine_with_warmup
   num_warmup_epochs: 5

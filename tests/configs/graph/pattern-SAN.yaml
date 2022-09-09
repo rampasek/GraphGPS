@@ -1,6 +1,6 @@
 out_dir: tests/results
 tensorboard_each_run: True  # Log to Tensorboard each run
-metric_best: accuracy
+metric_best: accuracy-SBM
 dataset:
   format: PyG-GNNBenchmarkDataset
   name: PATTERN
