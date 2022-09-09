@@ -61,11 +61,11 @@ run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.10run"
 
 
 DATASET="pattern"
-run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.10run"
+run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.eigv16.lr0005"
 
 
 DATASET="cluster"
-run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.10run.drp01.wd-5"
+run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.lr0005.10run"
 
 
 DATASET="ogbg-molhiv"
@@ -92,3 +92,11 @@ run_repeats ${DATASET} GPSmedium+RWSE "name_tag GPSwRWSE.medium.lyr10.dim384.hea
 DATASET="malnettiny"
 run_repeats ${DATASET} GPS-noPE  "name_tag GPS-noPE.GatedGCN+Perf.lyr5.dim64.10runs"
 run_repeats ${DATASET} GPS-noPE  "name_tag GPS-noPE.GatedGCN+Trf.lyr5.dim64.bs4.bacc4.10run  train.batch_size 4 optim.batch_accumulation 4 gt.layer_type CustomGatedGCN+Transformer"
+
+
+################################################################################
+##### extra
+################################################################################
+cfg_dir="configs/SAN"
+DATASET="pattern"
+#run_repeats ${DATASET} SAN "name_tag SAN.LapPE.10run"
