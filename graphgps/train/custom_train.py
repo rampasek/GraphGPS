@@ -233,15 +233,12 @@ def inference_only(loggers, loaders, model, optimizer=None, scheduler=None):
         eval_epoch(loggers[i], loaders[i], model,
                    split=split_names[i])
         perf[i].append(loggers[i].write_epoch(cur_epoch))
-    val_perf = perf[1]
 
-    best_epoch = np.array([vp['loss'] for vp in val_perf]).argmin()
+    best_epoch = 0
     best_train = best_val = best_test = ""
     if cfg.metric_best != 'auto':
         # Select again based on val perf of `cfg.metric_best`.
         m = cfg.metric_best
-        best_epoch = getattr(np.array([vp[m] for vp in val_perf]),
-                             cfg.metric_agg)()
         if m in perf[0][best_epoch]:
             best_train = f"train_{m}: {perf[0][best_epoch][m]:.4f}"
         else:
@@ -260,3 +257,128 @@ def inference_only(loggers, loaders, model, optimizer=None, scheduler=None):
     logging.info(f'Done! took: {time.perf_counter() - start_time:.2f}s')
     for logger in loggers:
         logger.close()
+
+
+@register_train('PCQM4Mv2-inference')
+def ogblsc_inference(loggers, loaders, model, optimizer=None, scheduler=None):
+    """
+    Customized pipeline to run inference on OGB-LSC PCQM4Mv2.
+
+    Args:
+        loggers: Unused, exists just for API compatibility
+        loaders: List of loaders
+        model: GNN model
+        optimizer: Unused, exists just for API compatibility
+        scheduler: Unused, exists just for API compatibility
+    """
+    from ogb.lsc import PCQM4Mv2Evaluator
+    evaluator = PCQM4Mv2Evaluator()
+
+    num_splits = 3
+    split_names = ['valid', 'test-dev', 'test-challenge']
+    assert len(loaders) == num_splits, "Expecting 3 particular splits."
+
+    # Check PCQM4Mv2 prediction targets.
+    logging.info(f"0 ({split_names[0]}): {len(loaders[0].dataset)}")
+    assert(all([not torch.isnan(d.y)[0] for d in loaders[0].dataset]))
+    logging.info(f"1 ({split_names[1]}): {len(loaders[1].dataset)}")
+    assert(all([torch.isnan(d.y)[0] for d in loaders[1].dataset]))
+    logging.info(f"2 ({split_names[2]}): {len(loaders[2].dataset)}")
+    assert(all([torch.isnan(d.y)[0] for d in loaders[2].dataset]))
+
+    model.eval()
+    for i in range(num_splits):
+        all_true = []
+        all_pred = []
+        for batch in loaders[i]:
+            batch.to(torch.device(cfg.device))
+            pred, true = model(batch)
+            all_true.append(true.detach().to('cpu', non_blocking=True))
+            all_pred.append(pred.detach().to('cpu', non_blocking=True))
+        all_true, all_pred = torch.cat(all_true), torch.cat(all_pred)
+
+        if i == 0:
+            input_dict = {'y_pred': all_pred.squeeze(),
+                          'y_true': all_true.squeeze()}
+            result_dict = evaluator.eval(input_dict)
+            logging.info(f"{split_names[i]}: MAE = {result_dict['mae']}")  # Get MAE.
+        else:
+            input_dict = {'y_pred': all_pred.squeeze()}
+            evaluator.save_test_submission(input_dict=input_dict,
+                                           dir_path=cfg.run_dir,
+                                           mode=split_names[i])
+
+
+@ register_train('log-attn-weights')
+def log_attn_weights(loggers, loaders, model, optimizer=None, scheduler=None):
+    """
+    Customized pipeline to inference on the test set and log the attention
+    weights in Transformer modules.
+
+    Args:
+        loggers: Unused, exists just for API compatibility
+        loaders: List of loaders
+        model (torch.nn.Module): GNN model
+        optimizer: Unused, exists just for API compatibility
+        scheduler: Unused, exists just for API compatibility
+    """
+    import os.path as osp
+    from torch_geometric.loader.dataloader import DataLoader
+    from graphgps.utils import unbatch, unbatch_edge_index
+
+    start_time = time.perf_counter()
+
+    # The last loader is a test set.
+    l = loaders[-1]
+    # To get a random sample, create a new loader that shuffles the test set.
+    loader = DataLoader(l.dataset, batch_size=l.batch_size,
+                        shuffle=True, num_workers=0)
+
+    output = []
+    # batch = next(iter(loader))  # Run one random batch.
+    for b_index, batch in enumerate(loader):
+        bsize = batch.batch.max().item() + 1  # Batch size.
+        if len(output) >= 128:
+            break
+        print(f">> Batch {b_index}:")
+
+        X_orig = unbatch(batch.x.cpu(), batch.batch.cpu())
+        batch.to(torch.device(cfg.device))
+        model.eval()
+        model(batch)
+
+        # Unbatch to individual graphs.
+        X = unbatch(batch.x.cpu(), batch.batch.cpu())
+        edge_indices = unbatch_edge_index(batch.edge_index.cpu(),
+                                          batch.batch.cpu())
+        graphs = []
+        for i in range(bsize):
+            graphs.append({'num_nodes': len(X[i]),
+                           'x_orig': X_orig[i],
+                           'x_final': X[i],
+                           'edge_index': edge_indices[i],
+                           'attn_weights': []  # List with attn weights in layers from 0 to L-1.
+                           })
+
+        # Iterate through GPS layers and pull out stored attn weights.
+        for l_i, (name, module) in enumerate(model.layers.named_children()):
+            if hasattr(module, 'attn_weights'):
+                print(l_i, name, module.attn_weights.shape)
+                for g_i in range(bsize):
+                    # Clip to the number of nodes in this graph.
+                    # num_nodes = graphs[g_i]['num_nodes']
+                    # aw = module.attn_weights[g_i, :num_nodes, :num_nodes]
+                    aw = module.attn_weights[g_i]
+                    graphs[g_i]['attn_weights'].append(aw.cpu())
+        output += graphs
+
+    logging.info(
+        f"[*] Collected a total of {len(output)} graphs and their "
+        f"attention weights for {len(output[0]['attn_weights'])} layers.")
+
+    # Save the graphs and their attention stats.
+    save_file = osp.join(cfg.run_dir, 'graph_attn_stats.pt')
+    logging.info(f"Saving to file: {save_file}")
+    torch.save(output, save_file)
+
+    logging.info(f'Done! took: {time.perf_counter() - start_time:.2f}s')
