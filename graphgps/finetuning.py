@@ -82,7 +82,7 @@ def load_pretrained_model_cfg(cfg):
     # Copy over GNN cfg but not those for the prediction head
     compare_cfg(cfg, pretrained_cfg, 'gnn.head')
     compare_cfg(cfg, pretrained_cfg, 'gnn.layers_post_mp')
-    compare_cfg(cfg, pretrained_cfg, 'gnn.act')
+    compare_cfg(cfg, pretrained_cfg, 'gnn.act', strict=True)
     compare_cfg(cfg, pretrained_cfg, 'gnn.dropout')
     head = cfg.gnn.head
     post_mp = cfg.gnn.layers_post_mp

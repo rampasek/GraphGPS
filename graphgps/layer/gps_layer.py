@@ -1,16 +1,16 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch_geometric.graphgym.register as register
 import torch_geometric.nn as pygnn
 from performer_pytorch import SelfAttention
 from torch_geometric.data import Batch
 from torch_geometric.nn import Linear as Linear_pyg
 from torch_geometric.utils import to_dense_batch
 
+from graphgps.layer.bigbird_layer import SingleBigBirdLayer
 from graphgps.layer.gatedgcn_layer import GatedGCNLayer
 from graphgps.layer.gine_conv_layer import GINEConvESLapPE
-from graphgps.layer.bigbird_layer import SingleBigBirdLayer
 
 
 class GPSLayer(nn.Module):
@@ -18,10 +18,10 @@ class GPSLayer(nn.Module):
     """
 
     def __init__(self, dim_h,
-                 local_gnn_type, global_model_type, num_heads,
+                 local_gnn_type, global_model_type, num_heads, act='relu',
                  pna_degrees=None, equivstable_pe=False, dropout=0.0,
                  attn_dropout=0.0, layer_norm=False, batch_norm=True,
-                 bigbird_cfg=None):
+                 bigbird_cfg=None, log_attn_weights=False):
         super().__init__()
 
         self.dim_h = dim_h
@@ -30,6 +30,14 @@ class GPSLayer(nn.Module):
         self.layer_norm = layer_norm
         self.batch_norm = batch_norm
         self.equivstable_pe = equivstable_pe
+        self.activation = register.act_dict[act]
+
+        self.log_attn_weights = log_attn_weights
+        if log_attn_weights and global_model_type != 'Transformer':
+            raise NotImplementedError(
+                "Logging of attention weights is only supported for "
+                "Transformer global attention model."
+            )
 
         # Local message-passing model.
         if local_gnn_type == 'None':
@@ -38,7 +46,7 @@ class GPSLayer(nn.Module):
             self.local_model = pygnn.GENConv(dim_h, dim_h)
         elif local_gnn_type == 'GINE':
             gin_nn = nn.Sequential(Linear_pyg(dim_h, dim_h),
-                                   nn.ReLU(),
+                                   self.activation,
                                    Linear_pyg(dim_h, dim_h))
             if self.equivstable_pe:  # Use specialised GINE layer for EquivStableLapPE.
                 self.local_model = GINEConvESLapPE(gin_nn)
@@ -60,7 +68,7 @@ class GPSLayer(nn.Module):
                                              aggregators=aggregators,
                                              scalers=scalers,
                                              deg=deg,
-                                             edge_dim=16, # dim_h,
+                                             edge_dim=min(128, dim_h),
                                              towers=1,
                                              pre_layers=1,
                                              post_layers=1,
@@ -69,6 +77,7 @@ class GPSLayer(nn.Module):
             self.local_model = GatedGCNLayer(dim_h, dim_h,
                                              dropout=dropout,
                                              residual=True,
+                                             act=act,
                                              equivstable_pe=equivstable_pe)
         else:
             raise ValueError(f"Unsupported local GNN model: {local_gnn_type}")
@@ -103,10 +112,10 @@ class GPSLayer(nn.Module):
 
         # Normalization for MPNN and Self-Attention representations.
         if self.layer_norm:
-            # self.norm1_local = pygnn.norm.LayerNorm(dim_h)
-            # self.norm1_attn = pygnn.norm.LayerNorm(dim_h)
-            self.norm1_local = pygnn.norm.GraphNorm(dim_h)
-            self.norm1_attn = pygnn.norm.GraphNorm(dim_h)
+            self.norm1_local = pygnn.norm.LayerNorm(dim_h)
+            self.norm1_attn = pygnn.norm.LayerNorm(dim_h)
+            # self.norm1_local = pygnn.norm.GraphNorm(dim_h)
+            # self.norm1_attn = pygnn.norm.GraphNorm(dim_h)
             # self.norm1_local = pygnn.norm.InstanceNorm(dim_h)
             # self.norm1_attn = pygnn.norm.InstanceNorm(dim_h)
         if self.batch_norm:
@@ -116,12 +125,11 @@ class GPSLayer(nn.Module):
         self.dropout_attn = nn.Dropout(dropout)
 
         # Feed Forward block.
-        self.activation = F.relu
         self.ff_linear1 = nn.Linear(dim_h, dim_h * 2)
         self.ff_linear2 = nn.Linear(dim_h * 2, dim_h)
         if self.layer_norm:
-            # self.norm2 = pygnn.norm.LayerNorm(dim_h)
-            self.norm2 = pygnn.norm.GraphNorm(dim_h)
+            self.norm2 = pygnn.norm.LayerNorm(dim_h)
+            # self.norm2 = pygnn.norm.GraphNorm(dim_h)
             # self.norm2 = pygnn.norm.InstanceNorm(dim_h)
         if self.batch_norm:
             self.norm2 = nn.BatchNorm1d(dim_h)
@@ -200,10 +208,19 @@ class GPSLayer(nn.Module):
     def _sa_block(self, x, attn_mask, key_padding_mask):
         """Self-attention block.
         """
-        x = self.self_attn(x, x, x,
-                           attn_mask=attn_mask,
-                           key_padding_mask=key_padding_mask,
-                           need_weights=False)[0]
+        if not self.log_attn_weights:
+            x = self.self_attn(x, x, x,
+                               attn_mask=attn_mask,
+                               key_padding_mask=key_padding_mask,
+                               need_weights=False)[0]
+        else:
+            # Requires PyTorch v1.11+ to support `average_attn_weights = True`
+            # option to return attention weights of individual heads.
+            x, A = self.self_attn(x, x, x,
+                                  attn_mask=attn_mask,
+                                  key_padding_mask=key_padding_mask,
+                                  need_weights=True)
+            self.attn_weights = A.detach().cpu()
         return x
 
     def _ff_block(self, x):
