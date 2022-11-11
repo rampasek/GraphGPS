@@ -31,8 +31,11 @@ class FeatureEncoder(torch.nn.Module):
             # Update dim_in to reflect the new dimension fo the node features
             self.dim_in = cfg.gnn.dim_inner
         if cfg.dataset.edge_encoder:
-            # Hard-set edge dim for PNA.
-            cfg.gnn.dim_edge = 16 if 'PNA' in cfg.gt.layer_type else cfg.gnn.dim_inner
+            # Hard-limit max edge dim for PNA.
+            if 'PNA' in cfg.gt.layer_type:
+                cfg.gnn.dim_edge = min(128, cfg.gnn.dim_inner)
+            else:
+                cfg.gnn.dim_edge = cfg.gnn.dim_inner
             # Encode integer edge features via nn.Embeddings
             EdgeEncoder = register.edge_encoder_dict[
                 cfg.dataset.edge_encoder_name]
@@ -77,6 +80,7 @@ class GPSModel(torch.nn.Module):
                 local_gnn_type=local_gnn_type,
                 global_model_type=global_model_type,
                 num_heads=cfg.gt.n_heads,
+                act=cfg.gnn.act,
                 pna_degrees=cfg.gt.pna_degrees,
                 equivstable_pe=cfg.posenc_EquivStableLapPE.enable,
                 dropout=cfg.gt.dropout,
@@ -84,6 +88,7 @@ class GPSModel(torch.nn.Module):
                 layer_norm=cfg.gt.layer_norm,
                 batch_norm=cfg.gt.batch_norm,
                 bigbird_cfg=cfg.gt.bigbird,
+                log_attn_weights=cfg.train.mode == 'log-attn-weights',
             ))
         self.layers = torch.nn.Sequential(*layers)
 
