@@ -20,3 +20,6 @@ class SWISH(nn.Module):
 
 register_act('swish', SWISH(inplace=cfg.mem.inplace))
 register_act('lrelu_03', nn.LeakyReLU(0.3, inplace=cfg.mem.inplace))
+
+# Add Gaussian Error Linear Unit (GELU).
+register_act('gelu', nn.GELU())
