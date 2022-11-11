@@ -212,9 +212,11 @@ def load_dataset_master(format, name, dataset_dir):
     prepare_splits(dataset)
 
     # Precompute in-degree histogram if needed for PNAConv.
-    if cfg.gt.layer_type.startswith('PNAConv') and len(cfg.gt.pna_degrees) == 0:
+    if cfg.gt.layer_type.startswith('PNA') and len(cfg.gt.pna_degrees) == 0:
         cfg.gt.pna_degrees = compute_indegree_histogram(
             dataset[dataset.data['train_graph_index']])
+        # print(f"Indegrees: {cfg.gt.pna_degrees}")
+        # print(f"Avg:{np.mean(cfg.gt.pna_degrees)}")
 
     return dataset
 
@@ -394,17 +396,44 @@ def preformat_OGB_PCQM4Mv2(dataset_dir, name):
                       valid_idx,  # Subset of original 'train' as validation set.
                       split_idx['valid']  # The original 'valid' as testing set.
                       ]
+
     elif name == 'subset':
         # Further subset the training set for faster debugging.
         subset_ratio = 0.1
         subtrain_idx = train_idx[:int(subset_ratio * len(train_idx))]
         subvalid_idx = valid_idx[:50000]
         subtest_idx = split_idx['valid']  # The original 'valid' as testing set.
+
         dataset = dataset[torch.cat([subtrain_idx, subvalid_idx, subtest_idx])]
+        data_list = [data for data in dataset]
+        dataset._indices = None
+        dataset._data_list = data_list
+        dataset.data, dataset.slices = dataset.collate(data_list)
         n1, n2, n3 = len(subtrain_idx), len(subvalid_idx), len(subtest_idx)
         split_idxs = [list(range(n1)),
                       list(range(n1, n1 + n2)),
                       list(range(n1 + n2, n1 + n2 + n3))]
+
+    elif name == 'inference':
+        split_idxs = [split_idx['valid'],  # The original labeled 'valid' set.
+                      split_idx['test-dev'],  # Held-out unlabeled test dev.
+                      split_idx['test-challenge']  # Held-out challenge test set.
+                      ]
+
+        dataset = dataset[torch.cat(split_idxs)]
+        data_list = [data for data in dataset]
+        dataset._indices = None
+        dataset._data_list = data_list
+        dataset.data, dataset.slices = dataset.collate(data_list)
+        n1, n2, n3 = len(split_idxs[0]), len(split_idxs[1]), len(split_idxs[2])
+        split_idxs = [list(range(n1)),
+                      list(range(n1, n1 + n2)),
+                      list(range(n1 + n2, n1 + n2 + n3))]
+        # Check prediction targets.
+        assert(all([not torch.isnan(dataset[i].y)[0] for i in split_idxs[0]]))
+        assert(all([torch.isnan(dataset[i].y)[0] for i in split_idxs[1]]))
+        assert(all([torch.isnan(dataset[i].y)[0] for i in split_idxs[2]]))
+
     else:
         raise ValueError(f'Unexpected OGB PCQM4Mv2 subset choice: {name}')
     dataset.split_idxs = split_idxs
