@@ -25,7 +25,7 @@ function run_repeats {
 
     # Run each repeat as a separate job
     for SEED in {0..9}; do
-        script="sbatch -J ${cfg_suffix}-${dataset} run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
+        script="sbatch ${slurm_directive} -J ${cfg_suffix}-${dataset} run/wrapper.sb ${main} --repeat 1 seed ${SEED} ${common_params}"
         echo $script
         eval $script
     done
@@ -49,35 +49,43 @@ done
 cfg_dir="configs/GPS"
 
 DATASET="zinc"
-run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.10runs"
+slurm_directive="--time=0-15:00:00 --mem=16G --gres=gpu:1 --cpus-per-task=4"
+run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.10run"
 
 
 DATASET="mnist"
+slurm_directive="--time=0-5:00:00 --mem=16G --gres=gpu:1 --cpus-per-task=4"
 run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.10run"
 
 
 DATASET="cifar10"
+slurm_directive="--time=0-5:00:00 --mem=16G --gres=gpu:1 --cpus-per-task=4"
 run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.10run"
 
 
 DATASET="pattern"
-run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.eigv16.lr0005"
+slurm_directive="--time=0-6:00:00 --mem=16G --gres=gpu:1 --cpus-per-task=4"
+run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.10run  wandb.project PATTERN-fix"
 
 
 DATASET="cluster"
-run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.lr0005.10run"
+slurm_directive="--time=0-6:00:00 --mem=16G --gres=gpu:1 --cpus-per-task=4"
+run_repeats ${DATASET} GPS "name_tag GPSwLapPE.GatedGCN+Trf.10run  wandb.project CLUSTER-fix"
 
 
 DATASET="ogbg-molhiv"
-run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.GatedGCN+Trf.lyr10.wd-5.drp005.10run"
+slurm_directive="--time=0-6:00:00 --mem=16G --gres=gpu:1 --cpus-per-task=4"
+run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.GatedGCN+Trf.10run"
 
 
 DATASET="ogbg-molpcba"
-run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.dim384.meanpool.wBNposmlp1.wd-5.10runs"
+slurm_directive="--time=0-12:00:00 --mem=16G --gres=gpu:1 --cpus-per-task=4"
+run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.10run"
 
 
 DATASET="ogbg-code2"
-run_repeats ${DATASET} GPS "name_tag GPSnoPE.GatedGCN+Perf.drp02.wd-5"
+slurm_directive="--time=1-6:00:00 --mem=24G --gres=gpu:1 --cpus-per-task=4"
+run_repeats ${DATASET} GPS "name_tag GPSnoPE.10run"
 
 
 DATASET="ogbg-ppa"  # NOTE: for ogbg-ppa we need SBATCH --mem=48G
@@ -85,8 +93,15 @@ run_repeats ${DATASET} GPS "name_tag GPSnoPE.GatedGCN+Perf.lyr3.dim256.drp01.wd-
 
 
 DATASET="pcqm4m"  # NOTE: for PCQM4Mv2 we need SBATCH --mem=48G and up to 3days runtime; run only one repeat
-run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.small.lyr5.dim304"
-run_repeats ${DATASET} GPSmedium+RWSE "name_tag GPSwRWSE.medium.lyr10.dim384.heads16.drp01.attndrp01.lr0002.e150"
+slurm_directive="--time=3-00:00:00 --mem=48G --gres=gpu:1 --cpus-per-task=4"
+#run_repeats ${DATASET} GPS+RWSE "name_tag GPSwRWSE.small.lyr5.dim304  train.ckpt_best True"
+#run_repeats ${DATASET} GPSmedium+RWSE "name_tag GPSwRWSE.medium.lyr10.dim384.heads16.drp01.attndrp01.lr0002.e150  train.ckpt_best True"
+
+run_repeats ${DATASET} GPSmedium+RWSE "name_tag GPSwRWSE.medium train.ckpt_best True"
+run_repeats ${DATASET} GPSmedium+RWSE "name_tag GPSwRWSE.medium.gelu.linlr  optim.scheduler linear_with_warmup gnn.act gelu train.ckpt_best True"
+
+slurm_directive="--time=4-00:00:00 --mem=48G --gres=gpu:1 --cpus-per-task=4"
+run_repeats ${DATASET} GPSlarge+RWSE "name_tag GPSwRWSE.large train.ckpt_best True"
 
 
 DATASET="malnettiny"
@@ -94,9 +109,15 @@ run_repeats ${DATASET} GPS-noPE  "name_tag GPS-noPE.GatedGCN+Perf.lyr5.dim64.10r
 run_repeats ${DATASET} GPS-noPE  "name_tag GPS-noPE.GatedGCN+Trf.lyr5.dim64.bs4.bacc4.10run  train.batch_size 4 optim.batch_accumulation 4 gt.layer_type CustomGatedGCN+Transformer"
 
 
+
 ################################################################################
-##### extra
+##### SAN
 ################################################################################
 cfg_dir="configs/SAN"
-DATASET="pattern"
-#run_repeats ${DATASET} SAN "name_tag SAN.LapPE.10run"
+slurm_directive="--time=1-00:00:00 --mem=16G --gres=gpu:1 --cpus-per-task=4"
+
+#DATASET="pattern"
+#run_repeats ${DATASET} SAN "name_tag SAN.10run-fix  wandb.project PATTERN-fix"
+#
+#DATASET="cluster"
+#run_repeats ${DATASET} SAN "name_tag SAN.10run-fix  wandb.project CLUSTER-fix"
