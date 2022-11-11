@@ -27,7 +27,8 @@ train:
   mode: custom
   batch_size: 256
   eval_period: 1
-  ckpt_period: 100
+  ckpt_best: True
+#  ckpt_period: 100
 model:
   type: GPSModel
   loss_fun: l1
