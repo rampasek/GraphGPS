@@ -6,7 +6,7 @@ wandb:
   project: scratch  # W&B project for debugging runs.
 dataset:
   format: OGB
-  name: PCQM4Mv2-full
+  name: PCQM4Mv2-inference
   task: graph
   task_type: regression
   transductive: False
@@ -17,10 +17,10 @@ dataset:
   edge_encoder_name: Bond
   edge_encoder_bn: False
 pretrained:
-  dir: pretrained/pcqm4m-GPS+RWSE.medium
+  dir: pretrained/pcqm4m-GPS+RWSE.deep
   reset_prediction_head: False
 train:
-  mode: inference-only
+  mode: PCQM4Mv2-inference
   batch_size: 256
 model:
   type: GPSModel
@@ -30,5 +30,5 @@ gnn:
   head: san_graph
   layers_post_mp: 3  # Not used when `gnn.head: san_graph`
   batchnorm: True
-  act: relu
+  act: gelu
   dropout: 0.0
