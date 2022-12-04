@@ -1,0 +1,41 @@
+out_dir: /network/scratch/l/lavoiems/graphgps/pretrained/pcqm4m-GPS+RWSE.deep
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: False
+  project: scratch  # W&B project for debugging runs.
+dataset:
+  format: OGB
+  name: PCQM4Mv2-full
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+pretrained:
+  dir: /network/scratch/l/lavoiems/graphgps/pretrained/pcqm4m-GPS+RWSE.deep
+  reset_prediction_head: True
+  freeze_main: True
+sem:
+  L: 256
+  V: 16
+  tau: 0.1
+train:
+  mode: standard
+  batch_size: 256
+model:
+  type: GPSSEMModel
+  loss_fun: l1
+  graph_pooling: mean
+gnn:
+  head: san_graph
+  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
+  batchnorm: True
+  act: gelu
+  dropout: 0.0
+optim:
+  base_lr: 0.001
