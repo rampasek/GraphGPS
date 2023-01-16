@@ -120,6 +120,12 @@ def init_model_from_pretrained(model, pretrained_dir,
     pretrained_dict = ckpt[MODEL_STATE]
     model_dict = model.state_dict()
 
+    if not list(pretrained_dict.keys())[0].startswith('model.'):
+        # Update checkpoint dict for models saved with GraphGym PyG prior v2.1
+        for k in list(pretrained_dict.keys()):
+            # print(f'    updating: {k}   ->   model.{k}')
+            pretrained_dict[f'model.{k}'] = pretrained_dict.pop(k)
+
     # print('>>>> pretrained dict: ')
     # print(pretrained_dict.keys())
     # print('>>>> model dict: ')

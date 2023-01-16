@@ -50,7 +50,7 @@ class LapPENodeEncoder(torch.nn.Module):
         else:
             self.raw_norm = None
 
-        activation = nn.ReLU()  # register.act_dict[cfg.gnn.act]
+        activation = nn.ReLU  # register.act_dict[cfg.gnn.act]
         if model_type == 'Transformer':
             # Transformer model for LapPE
             encoder_layer = nn.TransformerEncoderLayer(d_model=dim_pe,
@@ -62,15 +62,15 @@ class LapPENodeEncoder(torch.nn.Module):
             # DeepSet model for LapPE
             layers = []
             if n_layers == 1:
-                layers.append(activation)
+                layers.append(activation())
             else:
                 self.linear_A = nn.Linear(2, 2 * dim_pe)
-                layers.append(activation)
+                layers.append(activation())
                 for _ in range(n_layers - 2):
                     layers.append(nn.Linear(2 * dim_pe, 2 * dim_pe))
-                    layers.append(activation)
+                    layers.append(activation())
                 layers.append(nn.Linear(2 * dim_pe, dim_pe))
-                layers.append(activation)
+                layers.append(activation())
             self.pe_encoder = nn.Sequential(*layers)
 
         self.post_mlp = None
@@ -79,15 +79,15 @@ class LapPENodeEncoder(torch.nn.Module):
             layers = []
             if post_n_layers == 1:
                 layers.append(nn.Linear(dim_pe, dim_pe))
-                layers.append(activation)
+                layers.append(activation())
             else:
                 layers.append(nn.Linear(dim_pe, 2 * dim_pe))
-                layers.append(activation)
+                layers.append(activation())
                 for _ in range(post_n_layers - 2):
                     layers.append(nn.Linear(2 * dim_pe, 2 * dim_pe))
-                    layers.append(activation)
+                    layers.append(activation())
                 layers.append(nn.Linear(2 * dim_pe, dim_pe))
-                layers.append(activation)
+                layers.append(activation())
             self.post_mlp = nn.Sequential(*layers)
 
 

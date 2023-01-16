@@ -68,8 +68,8 @@ class CustomLogger(Logger):
 
         if true.shape[0] < 1e7:  # AUROC computation for very large datasets is too slow.
             # TorchMetrics AUROC on GPU if available.
-            auroc_score = auroc(pred_score.to(torch.device(cfg.device)),
-                                true.to(torch.device(cfg.device)),
+            auroc_score = auroc(pred_score.to(torch.device(cfg.accelerator)),
+                                true.to(torch.device(cfg.accelerator)),
                                 pos_label=1)
             if self.test_scores:
                 # SK-learn version.
@@ -109,8 +109,8 @@ class CustomLogger(Logger):
         if true.shape[0] < 1e7:
             # AUROC computation for very large datasets runs out of memory.
             # TorchMetrics AUROC on GPU is much faster than sklearn for large ds
-            res['auc'] = reformat(auroc(pred_score.to(torch.device(cfg.device)),
-                                        true.to(torch.device(cfg.device)).squeeze(),
+            res['auc'] = reformat(auroc(pred_score.to(torch.device(cfg.accelerator)),
+                                        true.to(torch.device(cfg.accelerator)).squeeze(),
                                         num_classes=pred_score.shape[1],
                                         average='macro'))
 
@@ -128,8 +128,8 @@ class CustomLogger(Logger):
         reformat = lambda x: round(float(x), cfg.round)
 
         # Send to GPU to speed up TorchMetrics if possible.
-        true = true.to(torch.device(cfg.device))
-        pred_score = pred_score.to(torch.device(cfg.device))
+        true = true.to(torch.device(cfg.accelerator))
+        pred_score = pred_score.to(torch.device(cfg.accelerator))
         acc = MetricWrapper(metric='accuracy',
                             target_nan_mask='ignore-mean-label',
                             threshold=0.,

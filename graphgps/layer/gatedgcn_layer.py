@@ -29,12 +29,15 @@ class GatedGCNLayer(pyg_nn.conv.MessagePassing):
         self.EquivStablePE = equivstable_pe
         if self.EquivStablePE:
             self.mlp_r_ij = nn.Sequential(
-                nn.Linear(1, out_dim), self.activation,
+                nn.Linear(1, out_dim),
+                self.activation(),
                 nn.Linear(out_dim, 1),
                 nn.Sigmoid())
 
         self.bn_node_x = nn.BatchNorm1d(out_dim)
         self.bn_edge_e = nn.BatchNorm1d(out_dim)
+        self.act_fn_x = self.activation()
+        self.act_fn_e = self.activation()
         self.dropout = dropout
         self.residual = residual
         self.e = None
@@ -69,8 +72,8 @@ class GatedGCNLayer(pyg_nn.conv.MessagePassing):
         x = self.bn_node_x(x)
         e = self.bn_edge_e(e)
 
-        x = self.activation(x)
-        e = self.activation(e)
+        x = self.act_fn_x(x)
+        e = self.act_fn_e(e)
 
         x = F.dropout(x, self.dropout, training=self.training)
         e = F.dropout(e, self.dropout, training=self.training)

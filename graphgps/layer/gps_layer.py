@@ -46,7 +46,7 @@ class GPSLayer(nn.Module):
             self.local_model = pygnn.GENConv(dim_h, dim_h)
         elif local_gnn_type == 'GINE':
             gin_nn = nn.Sequential(Linear_pyg(dim_h, dim_h),
-                                   self.activation,
+                                   self.activation(),
                                    Linear_pyg(dim_h, dim_h))
             if self.equivstable_pe:  # Use specialised GINE layer for EquivStableLapPE.
                 self.local_model = GINEConvESLapPE(gin_nn)
@@ -127,6 +127,7 @@ class GPSLayer(nn.Module):
         # Feed Forward block.
         self.ff_linear1 = nn.Linear(dim_h, dim_h * 2)
         self.ff_linear2 = nn.Linear(dim_h * 2, dim_h)
+        self.act_fn_ff = self.activation()
         if self.layer_norm:
             self.norm2 = pygnn.norm.LayerNorm(dim_h)
             # self.norm2 = pygnn.norm.GraphNorm(dim_h)
@@ -214,19 +215,20 @@ class GPSLayer(nn.Module):
                                key_padding_mask=key_padding_mask,
                                need_weights=False)[0]
         else:
-            # Requires PyTorch v1.11+ to support `average_attn_weights = True`
+            # Requires PyTorch v1.11+ to support `average_attn_weights=False`
             # option to return attention weights of individual heads.
             x, A = self.self_attn(x, x, x,
                                   attn_mask=attn_mask,
                                   key_padding_mask=key_padding_mask,
-                                  need_weights=True)
+                                  need_weights=True,
+                                  average_attn_weights=False)
             self.attn_weights = A.detach().cpu()
         return x
 
     def _ff_block(self, x):
         """Feed Forward block.
         """
-        x = self.ff_dropout1(self.activation(self.ff_linear1(x)))
+        x = self.ff_dropout1(self.act_fn_ff(self.ff_linear1(x)))
         return self.ff_dropout2(self.ff_linear2(x))
 
     def extra_repr(self):
