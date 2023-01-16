@@ -136,7 +136,8 @@ If you find this work useful, please cite our NeurIPS 2022 paper:
 @article{rampasek2022GPS,
   title={{Recipe for a General, Powerful, Scalable Graph Transformer}}, 
   author={Ladislav Ramp\'{a}\v{s}ek and Mikhail Galkin and Vijay Prakash Dwivedi and Anh Tuan Luu and Guy Wolf and Dominique Beaini},
-  journal={arXiv:2205.12454},
+  journal={Advances in Neural Information Processing Systems},
+  volume={35},
   year={2022}
 }
 ```
