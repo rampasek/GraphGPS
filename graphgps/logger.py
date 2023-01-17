@@ -128,26 +128,29 @@ class CustomLogger(Logger):
         true, pred_score = torch.cat(self._true), torch.cat(self._pred)
         reformat = lambda x: round(float(x), cfg.round)
 
+        # MetricWrapper will remove NaNs and apply the metric to each target dim
+        acc = MetricWrapper(metric='accuracy',
+                            target_nan_mask='ignore-mean-label',
+                            task='binary',
+                            cast_to_int=True)
+        auroc = MetricWrapper(metric='auroc',
+                              target_nan_mask='ignore-mean-label',
+                              task='binary',
+                              cast_to_int=True)
+        # ap = MetricWrapper(metric='averageprecision',
+        #                    target_nan_mask='ignore-mean-label',
+        #                    task='binary',
+        #                    cast_to_int=True)
+        ogb_ap = reformat(metrics_ogb.eval_ap(true.cpu().numpy(),
+                                              pred_score.cpu().numpy())['ap'])
         # Send to GPU to speed up TorchMetrics if possible.
         true = true.to(torch.device(cfg.accelerator))
         pred_score = pred_score.to(torch.device(cfg.accelerator))
-        acc = MetricWrapper(metric='accuracy',
-                            target_nan_mask='ignore-mean-label',
-                            task='multilabel',
-                            threshold=0.,
-                            cast_to_int=True)
-        ap = MetricWrapper(metric='averageprecision',
-                           target_nan_mask='ignore-mean-label',
-                           task='multilabel',
-                           cast_to_int=True)
-        auroc = MetricWrapper(metric='auroc',
-                              target_nan_mask='ignore-mean-label',
-                              task='multilabel',
-                              cast_to_int=True)
         results = {
-            'accuracy': reformat(acc(pred_score, true)),
-            'ap': reformat(ap(pred_score, true)),
+            'accuracy': reformat(acc(torch.sigmoid(pred_score), true)),
             'auc': reformat(auroc(pred_score, true)),
+            # 'ap': reformat(ap(pred_score, true)),  # Slightly differs from sklearn.
+            'ap': ogb_ap,
         }
 
         if self.test_scores:
