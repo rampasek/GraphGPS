@@ -19,7 +19,7 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
     time_start = time.time()
     for iter, batch in enumerate(loader):
         batch.split = 'train'
-        batch.to(torch.device(cfg.device))
+        batch.to(torch.device(cfg.accelerator))
         pred, true = model(batch)
         if cfg.dataset.name == 'ogbg-code2':
             loss, pred_score = subtoken_cross_entropy(pred, true)
@@ -52,7 +52,7 @@ def eval_epoch(logger, loader, model, split='val'):
     time_start = time.time()
     for batch in loader:
         batch.split = split
-        batch.to(torch.device(cfg.device))
+        batch.to(torch.device(cfg.accelerator))
         if cfg.gnn.head == 'inductive_edge':
             pred, true, extra_stats = model(batch)
         else:
@@ -291,7 +291,7 @@ def ogblsc_inference(loggers, loaders, model, optimizer=None, scheduler=None):
         all_true = []
         all_pred = []
         for batch in loaders[i]:
-            batch.to(torch.device(cfg.device))
+            batch.to(torch.device(cfg.accelerator))
             pred, true = model(batch)
             all_true.append(true.detach().to('cpu', non_blocking=True))
             all_pred.append(pred.detach().to('cpu', non_blocking=True))
@@ -343,7 +343,7 @@ def log_attn_weights(loggers, loaders, model, optimizer=None, scheduler=None):
         print(f">> Batch {b_index}:")
 
         X_orig = unbatch(batch.x.cpu(), batch.batch.cpu())
-        batch.to(torch.device(cfg.device))
+        batch.to(torch.device(cfg.accelerator))
         model.eval()
         model(batch)
 
@@ -361,7 +361,7 @@ def log_attn_weights(loggers, loaders, model, optimizer=None, scheduler=None):
                            })
 
         # Iterate through GPS layers and pull out stored attn weights.
-        for l_i, (name, module) in enumerate(model.layers.named_children()):
+        for l_i, (name, module) in enumerate(model.model.layers.named_children()):
             if hasattr(module, 'attn_weights'):
                 print(l_i, name, module.attn_weights.shape)
                 for g_i in range(bsize):

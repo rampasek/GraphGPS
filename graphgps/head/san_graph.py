@@ -26,7 +26,7 @@ class SANGraphHead(nn.Module):
             nn.Linear(dim_in // 2 ** L, dim_out, bias=True))
         self.FC_layers = nn.ModuleList(list_FC_layers)
         self.L = L
-        self.activation = register.act_dict[cfg.gnn.act]
+        self.activation = register.act_dict[cfg.gnn.act]()
 
     def _apply_index(self, batch):
         return batch.graph_feature, batch.y

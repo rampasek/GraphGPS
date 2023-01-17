@@ -11,10 +11,12 @@ dataset:
   task_type: regression
   transductive: False
   node_encoder: True
-  node_encoder_name: ZINCNode+LapPE
+  node_encoder_name: TypeDictNode+LapPE
+  node_encoder_num_types: 28
   node_encoder_bn: False
   edge_encoder: True
-  edge_encoder_name: ZINCEdge
+  edge_encoder_name: TypeDictEdge
+  edge_encoder_num_types: 4
   edge_encoder_bn: False
 posenc_LapPE:
   enable: True

@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch_geometric.graphgym.register as register
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.register import register_node_encoder
 
@@ -54,20 +55,20 @@ class KernelPENodeEncoder(torch.nn.Module):
         else:
             self.raw_norm = None
 
-        activation = nn.ReLU()  # register.act_dict[cfg.gnn.act]
+        activation = nn.ReLU  # register.act_dict[cfg.gnn.act]
         if model_type == 'mlp':
             layers = []
             if n_layers == 1:
                 layers.append(nn.Linear(num_rw_steps, dim_pe))
-                layers.append(activation)
+                layers.append(activation())
             else:
                 layers.append(nn.Linear(num_rw_steps, 2 * dim_pe))
-                layers.append(activation)
+                layers.append(activation())
                 for _ in range(n_layers - 2):
                     layers.append(nn.Linear(2 * dim_pe, 2 * dim_pe))
-                    layers.append(activation)
+                    layers.append(activation())
                 layers.append(nn.Linear(2 * dim_pe, dim_pe))
-                layers.append(activation)
+                layers.append(activation())
             self.pe_encoder = nn.Sequential(*layers)
         elif model_type == 'linear':
             self.pe_encoder = nn.Linear(num_rw_steps, dim_pe)

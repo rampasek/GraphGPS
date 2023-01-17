@@ -116,9 +116,15 @@ def init_model_from_pretrained(model, pretrained_dir,
     ckpt_file = get_final_pretrained_ckpt(osp.join(pretrained_dir, '0', 'ckpt'))
     logging.info(f"[*] Loading from pretrained model: {ckpt_file}")
 
-    ckpt = torch.load(ckpt_file)
+    ckpt = torch.load(ckpt_file, map_location=torch.device('cpu'))
     pretrained_dict = ckpt[MODEL_STATE]
     model_dict = model.state_dict()
+
+    if not list(pretrained_dict.keys())[0].startswith('model.'):
+        # Update checkpoint dict for models saved with GraphGym PyG prior v2.1
+        for k in list(pretrained_dict.keys()):
+            # print(f'    updating: {k}   ->   model.{k}')
+            pretrained_dict[f'model.{k}'] = pretrained_dict.pop(k)
 
     # print('>>>> pretrained dict: ')
     # print(pretrained_dict.keys())

@@ -4,19 +4,19 @@ import torch
 import logging
 
 import graphgps  # noqa, register custom modules
+from graphgps.agg_runs import agg_runs
 from graphgps.optimizer.extra_optimizers import ExtendedSchedulerConfig
 
 from torch_geometric.graphgym.cmd_args import parse_args
 from torch_geometric.graphgym.config import (cfg, dump_cfg,
-                                             set_agg_dir, set_cfg, load_cfg,
+                                             set_cfg, load_cfg,
                                              makedirs_rm_exist)
 from torch_geometric.graphgym.loader import create_loader
 from torch_geometric.graphgym.logger import set_printing
 from torch_geometric.graphgym.optim import create_optimizer, \
     create_scheduler, OptimizerConfig
 from torch_geometric.graphgym.model_builder import create_model
-from torch_geometric.graphgym.train import train
-from torch_geometric.graphgym.utils.agg_runs import agg_runs
+from torch_geometric.graphgym.train import GraphGymDataModule, train
 from torch_geometric.graphgym.utils.comp_budget import params_count
 from torch_geometric.graphgym.utils.device import auto_select_device
 from torch_geometric.graphgym.register import train_dict
@@ -25,6 +25,10 @@ from torch_geometric import seed_everything
 from graphgps.finetuning import load_pretrained_model_cfg, \
     init_model_from_pretrained
 from graphgps.logger import create_logger
+
+
+torch.backends.cuda.matmul.allow_tf32 = True  # Default False in PyTorch 1.12+
+torch.backends.cudnn.allow_tf32 = True  # Default True
 
 
 def new_optimizer_config(cfg):
@@ -156,7 +160,8 @@ if __name__ == '__main__':
             if cfg.wandb.use:
                 logging.warning("[W] WandB logging is not supported with the "
                                 "default train.mode, set it to `custom`")
-            train(loggers, loaders, model, optimizer, scheduler)
+            datamodule = GraphGymDataModule()
+            train(model, datamodule, logger=True)
         else:
             train_dict[cfg.train.mode](loggers, loaders, model, optimizer,
                                        scheduler)

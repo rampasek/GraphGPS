@@ -307,10 +307,7 @@ class MetricWrapper:
             warnings.filterwarnings("default")
 
             # Average the metric
-            # metric_val = torch.nanmean(torch.stack(metric_val))  # PyTorch1.10
-            x = torch.stack(metric_val)  # PyTorch<=1.9
-            metric_val = torch.div(torch.nansum(x),
-                                   (~torch.isnan(x)).count_nonzero())
+            metric_val = torch.nanmean(torch.stack(metric_val))  # PyTorch1.10+
 
         else:
             metric_val = self.metric(preds, target, **self.kwargs)
