@@ -33,15 +33,30 @@ class GPSLayer(nn.Module):
         self.activation = register.act_dict[act]
 
         self.log_attn_weights = log_attn_weights
-        if log_attn_weights and global_model_type != 'Transformer':
+        if log_attn_weights and global_model_type not in ['Transformer',
+                                                          'BiasedTransformer']:
             raise NotImplementedError(
-                "Logging of attention weights is only supported for "
-                "Transformer global attention model."
+                f"Logging of attention weights is not supported "
+                f"for '{global_model_type}' global attention model."
             )
 
         # Local message-passing model.
+        self.local_gnn_with_edge_attr = True
         if local_gnn_type == 'None':
             self.local_model = None
+
+        # MPNNs without edge attributes support.
+        elif local_gnn_type == "GCN":
+            self.local_gnn_with_edge_attr = False
+            self.local_model = pygnn.GCNConv(dim_h, dim_h)
+        elif local_gnn_type == 'GIN':
+            self.local_gnn_with_edge_attr = False
+            gin_nn = nn.Sequential(Linear_pyg(dim_h, dim_h),
+                                   self.activation(),
+                                   Linear_pyg(dim_h, dim_h))
+            self.local_model = pygnn.GINConv(gin_nn)
+
+        # MPNNs supporting also edge attributes.
         elif local_gnn_type == 'GENConv':
             self.local_model = pygnn.GENConv(dim_h, dim_h)
         elif local_gnn_type == 'GINE':
@@ -86,7 +101,7 @@ class GPSLayer(nn.Module):
         # Global attention transformer-style model.
         if global_model_type == 'None':
             self.self_attn = None
-        elif global_model_type == 'Transformer':
+        elif global_model_type in ['Transformer', 'BiasedTransformer']:
             self.self_attn = torch.nn.MultiheadAttention(
                 dim_h, num_heads, dropout=self.attn_dropout, batch_first=True)
             # self.global_model = torch.nn.TransformerEncoderLayer(
@@ -158,11 +173,18 @@ class GPSLayer(nn.Module):
                 h_local = local_out.x
                 batch.edge_attr = local_out.edge_attr
             else:
-                if self.equivstable_pe:
-                    h_local = self.local_model(h, batch.edge_index, batch.edge_attr,
-                                               batch.pe_EquivStableLapPE)
+                if self.local_gnn_with_edge_attr:
+                    if self.equivstable_pe:
+                        h_local = self.local_model(h,
+                                                   batch.edge_index,
+                                                   batch.edge_attr,
+                                                   batch.pe_EquivStableLapPE)
+                    else:
+                        h_local = self.local_model(h,
+                                                   batch.edge_index,
+                                                   batch.edge_attr)
                 else:
-                    h_local = self.local_model(h, batch.edge_index, batch.edge_attr)
+                    h_local = self.local_model(h, batch.edge_index)
                 h_local = self.dropout_local(h_local)
                 h_local = h_in1 + h_local  # Residual connection.
 
@@ -177,6 +199,9 @@ class GPSLayer(nn.Module):
             h_dense, mask = to_dense_batch(h, batch.batch)
             if self.global_model_type == 'Transformer':
                 h_attn = self._sa_block(h_dense, None, ~mask)[mask]
+            elif self.global_model_type == 'BiasedTransformer':
+                # Use Graphormer-like conditioning, requires `batch.attn_bias`.
+                h_attn = self._sa_block(h_dense, batch.attn_bias, ~mask)[mask]
             elif self.global_model_type == 'Performer':
                 h_attn = self.self_attn(h_dense, mask=mask)[mask]
             elif self.global_model_type == 'BigBird':

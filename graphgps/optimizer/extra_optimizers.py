@@ -111,6 +111,17 @@ def cosine_with_warmup_scheduler(optimizer: Optimizer,
     return scheduler
 
 
+@register.register_scheduler('polynomial_with_warmup')
+def polynomial_with_warmup_scheduler(optimizer: Optimizer,
+                                 num_warmup_epochs: int, max_epoch: int):
+    scheduler = get_polynomial_decay_schedule_with_warmup(
+        optimizer=optimizer,
+        num_warmup_steps=num_warmup_epochs,
+        num_training_steps=max_epoch
+    )
+    return scheduler
+
+
 def get_linear_schedule_with_warmup(
         optimizer: Optimizer, num_warmup_steps: int, num_training_steps: int,
         last_epoch: int = -1):
@@ -176,5 +187,54 @@ def get_cosine_schedule_with_warmup(
             return max(1e-6, float(current_step) / float(max(1, num_warmup_steps)))
         progress = float(current_step - num_warmup_steps) / float(max(1, num_training_steps - num_warmup_steps))
         return max(0.0, 0.5 * (1.0 + math.cos(math.pi * float(num_cycles) * 2.0 * progress)))
+
+    return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda, last_epoch)
+
+
+def get_polynomial_decay_schedule_with_warmup(
+    optimizer, num_warmup_steps, num_training_steps, lr_end=1e-7, power=1.0, last_epoch=-1
+):
+    """
+    Implementation by Huggingface:
+    https://github.com/huggingface/transformers/blob/v4.16.2/src/transformers/optimization.py
+    
+    Create a schedule with a learning rate that decreases as a polynomial decay from the initial lr set in the
+    optimizer to end lr defined by *lr_end*, after a warmup period during which it increases linearly from 0 to the
+    initial lr set in the optimizer.
+    Args:
+        optimizer ([`~torch.optim.Optimizer`]):
+            The optimizer for which to schedule the learning rate.
+        num_warmup_steps (`int`):
+            The number of steps for the warmup phase.
+        num_training_steps (`int`):
+            The total number of training steps.
+        lr_end (`float`, *optional*, defaults to 1e-7):
+            The end LR.
+        power (`float`, *optional*, defaults to 1.0):
+            Power factor.
+        last_epoch (`int`, *optional*, defaults to -1):
+            The index of the last epoch when resuming training.
+    Note: *power* defaults to 1.0 as in the fairseq implementation, which in turn is based on the original BERT
+    implementation at
+    https://github.com/google-research/bert/blob/f39e881b169b9d53bea03d2d341b31707a6c052b/optimization.py#L37
+    Return:
+        `torch.optim.lr_scheduler.LambdaLR` with the appropriate schedule.
+    """
+
+    lr_init = optimizer.defaults["lr"]
+    if not (lr_init > lr_end):
+        raise ValueError(f"lr_end ({lr_end}) must be be smaller than initial lr ({lr_init})")
+
+    def lr_lambda(current_step: int):
+        if current_step < num_warmup_steps:
+            return float(current_step) / float(max(1, num_warmup_steps))
+        elif current_step > num_training_steps:
+            return lr_end / lr_init  # as LambdaLR multiplies by lr_init
+        else:
+            lr_range = lr_init - lr_end
+            decay_steps = num_training_steps - num_warmup_steps
+            pct_remaining = 1 - (current_step - num_warmup_steps) / decay_steps
+            decay = lr_range * pct_remaining ** power + lr_end
+            return decay / lr_init  # as LambdaLR multiplies by lr_init
 
     return optim.lr_scheduler.LambdaLR(optimizer, lr_lambda, last_epoch)

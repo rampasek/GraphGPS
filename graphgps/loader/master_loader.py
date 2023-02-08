@@ -8,8 +8,8 @@ import torch
 import torch_geometric.transforms as T
 from numpy.random import default_rng
 from ogb.graphproppred import PygGraphPropPredDataset
-from torch_geometric.datasets import (GNNBenchmarkDataset, Planetoid, TUDataset,
-                                      WikipediaNetwork, ZINC)
+from torch_geometric.datasets import (Actor, GNNBenchmarkDataset, Planetoid,
+                                      TUDataset, WebKB, WikipediaNetwork, ZINC)
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.loader import load_pyg, load_ogb, set_dataset_attr
 from torch_geometric.graphgym.register import register_loader
@@ -21,6 +21,7 @@ from graphgps.loader.dataset.voc_superpixels import VOCSuperpixels
 from graphgps.loader.split_generator import (prepare_splits,
                                              set_dataset_splits)
 from graphgps.transform.posenc_stats import compute_posenc_stats
+from graphgps.transform.task_preprocessing import task_specific_preprocessing
 from graphgps.transform.transforms import (pre_transform_in_memory,
                                            typecast_x, concat_x_and_pos,
                                            clip_graphs_to_size)
@@ -100,7 +101,12 @@ def load_dataset_master(format, name, dataset_dir):
         pyg_dataset_id = format.split('-', 1)[1]
         dataset_dir = osp.join(dataset_dir, pyg_dataset_id)
 
-        if pyg_dataset_id == 'GNNBenchmarkDataset':
+        if pyg_dataset_id == 'Actor':
+            if name != 'none':
+                raise ValueError(f"Actor class provides only one dataset.")
+            dataset = Actor(dataset_dir)
+
+        elif pyg_dataset_id == 'GNNBenchmarkDataset':
             dataset = preformat_GNNBenchmarkDataset(dataset_dir, name)
 
         elif pyg_dataset_id == 'MalNetTiny':
@@ -112,6 +118,21 @@ def load_dataset_master(format, name, dataset_dir):
         elif pyg_dataset_id == 'TUDataset':
             dataset = preformat_TUDataset(dataset_dir, name)
 
+        elif pyg_dataset_id == 'WebKB':
+            dataset = WebKB(dataset_dir, name)
+
+        elif pyg_dataset_id == 'WikipediaNetwork':
+            if name == 'crocodile':
+                raise NotImplementedError(f"crocodile not implemented")
+            dataset = WikipediaNetwork(dataset_dir, name,
+                                       geom_gcn_preprocess=True)
+
+        elif pyg_dataset_id == 'ZINC':
+            dataset = preformat_ZINC(dataset_dir, name)
+            
+        elif pyg_dataset_id == 'AQSOL':
+            dataset = preformat_AQSOL(dataset_dir, name)
+
         elif pyg_dataset_id == 'VOCSuperpixels':
             dataset = preformat_VOCSuperpixels(dataset_dir, name,
                                                cfg.dataset.slic_compactness)
@@ -119,18 +140,6 @@ def load_dataset_master(format, name, dataset_dir):
         elif pyg_dataset_id == 'COCOSuperpixels':
             dataset = preformat_COCOSuperpixels(dataset_dir, name,
                                                 cfg.dataset.slic_compactness)
-
-
-        elif pyg_dataset_id == 'WikipediaNetwork':
-            if name == 'crocodile':
-                raise NotImplementedError(f"crocodile not implemented yet")
-            dataset = WikipediaNetwork(dataset_dir, name)
-
-        elif pyg_dataset_id == 'ZINC':
-            dataset = preformat_ZINC(dataset_dir, name)
-            
-        elif pyg_dataset_id == 'AQSOL':
-            dataset = preformat_AQSOL(dataset_dir, name)
 
         else:
             raise ValueError(f"Unexpected PyG Dataset identifier: {format}")
@@ -170,6 +179,9 @@ def load_dataset_master(format, name, dataset_dir):
             raise ValueError(f"Unsupported OGB(-derived) dataset: {name}")
     else:
         raise ValueError(f"Unknown data format: {format}")
+
+    pre_transform_in_memory(dataset, partial(task_specific_preprocessing, cfg=cfg))
+
     log_loaded_dataset(dataset, format, name)
 
     # Precompute necessary statistics for positional encodings.
@@ -256,15 +268,21 @@ def preformat_GNNBenchmarkDataset(dataset_dir, name):
     if name in ['MNIST', 'CIFAR10']:
         tf_list = [concat_x_and_pos]  # concat pixel value and pos. coordinate
         tf_list.append(partial(typecast_x, type_str='float'))
+    elif name == "CSL":
+        pass
     else:
         ValueError(f"Loading dataset '{name}' from "
                    f"GNNBenchmarkDataset is not supported.")
 
-    dataset = join_dataset_splits(
-        [GNNBenchmarkDataset(root=dataset_dir, name=name, split=split)
-         for split in ['train', 'val', 'test']]
-    )
-    pre_transform_in_memory(dataset, T.Compose(tf_list))
+    if name in ['MNIST', 'CIFAR10']:
+        dataset = join_dataset_splits(
+            [GNNBenchmarkDataset(root=dataset_dir, name=name, split=split)
+            for split in ['train', 'val', 'test']]
+        )
+        pre_transform_in_memory(dataset, T.Compose(tf_list))
+
+    elif name == "CSL":
+        dataset = GNNBenchmarkDataset(root=dataset_dir, name=name)
 
     return dataset
 
@@ -517,7 +535,7 @@ def preformat_TUDataset(dataset_dir, name):
     Returns:
         PyG dataset object
     """
-    if name in ['DD', 'NCI1', 'ENZYMES', 'PROTEINS']:
+    if name in ['DD', 'NCI1', 'ENZYMES', 'PROTEINS', 'TRIANGLES']:
         func = None
     elif name.startswith('IMDB-') or name == "COLLAB":
         func = T.Constant()

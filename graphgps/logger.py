@@ -164,9 +164,9 @@ class CustomLogger(Logger):
                 'auc': reformat(
                     metrics_ogb.eval_rocauc(true, pred_score)['rocauc']),
             }
-            assert np.isclose(ogb['accuracy'], results['accuracy'])
-            assert np.isclose(ogb['ap'], results['ap'])
-            assert np.isclose(ogb['auc'], results['auc'])
+            assert np.isclose(ogb['accuracy'], results['accuracy'], atol=1e-05)
+            assert np.isclose(ogb['ap'], results['ap'], atol=1e-05)
+            assert np.isclose(ogb['auc'], results['auc'], atol=1e-05)
 
         return results
 

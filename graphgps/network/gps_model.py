@@ -28,7 +28,7 @@ class FeatureEncoder(torch.nn.Module):
                 self.node_encoder_bn = BatchNorm1dNode(
                     new_layer_config(cfg.gnn.dim_inner, -1, -1, has_act=False,
                                      has_bias=False, cfg=cfg))
-            # Update dim_in to reflect the new dimension fo the node features
+            # Update dim_in to reflect the new dimension of the node features
             self.dim_in = cfg.gnn.dim_inner
         if cfg.dataset.edge_encoder:
             # Hard-limit max edge dim for PNA.
@@ -53,7 +53,10 @@ class FeatureEncoder(torch.nn.Module):
 
 @register_network('GPSModel')
 class GPSModel(torch.nn.Module):
-    """Multi-scale graph x-former.
+    """General-Powerful-Scalable graph transformer.
+    https://arxiv.org/abs/2205.12454
+    Rampasek, L., Galkin, M., Dwivedi, V. P., Luu, A. T., Wolf, G., & Beaini, D.
+    Recipe for a general, powerful, scalable graph transformer. (NeurIPS 2022)
     """
 
     def __init__(self, dim_in, dim_out):
@@ -66,8 +69,12 @@ class GPSModel(torch.nn.Module):
                 dim_in, cfg.gnn.dim_inner, cfg.gnn.layers_pre_mp)
             dim_in = cfg.gnn.dim_inner
 
-        assert cfg.gt.dim_hidden == cfg.gnn.dim_inner == dim_in, \
-            "The inner and hidden dims must match."
+        if not cfg.gt.dim_hidden == cfg.gnn.dim_inner == dim_in:
+            raise ValueError(
+                f"The inner and hidden dims must match: "
+                f"embed_dim={cfg.gt.dim_hidden} dim_inner={cfg.gnn.dim_inner} "
+                f"dim_in={dim_in}"
+            )
 
         try:
             local_gnn_type, global_model_type = cfg.gt.layer_type.split('+')

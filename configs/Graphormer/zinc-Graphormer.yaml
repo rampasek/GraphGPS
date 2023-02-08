@@ -1,0 +1,62 @@
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: False
+  project: ZINC
+dataset:
+  format: PyG-ZINC
+  name: subset
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: TypeDictNode+GraphormerBias
+  node_encoder_num_types: 28
+  node_encoder_bn: False
+  edge_encoder: False
+  edge_encoder_name: TypeDictEdge
+  edge_encoder_num_types: 4
+  edge_encoder_bn: False
+posenc_GraphormerBias:
+  enable: True
+  node_degrees_only: False
+  num_spatial_types: 20
+  num_in_degrees: 64
+  num_out_degrees: 64
+train:
+  mode: custom
+  batch_size: 256
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: Graphormer
+  loss_fun: l1
+  edge_decoding: dot
+  graph_pooling: graph_token
+graphormer:
+  num_layers: 12
+  num_heads: 8
+  embed_dim: 80
+  dropout: 0.0
+  attention_dropout: 0.1
+  mlp_dropout: 0.1
+  input_dropout: 0.1
+gnn:
+  head: graphormer_graph
+  layers_pre_mp: 0
+  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
+  dim_inner: 80  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+optim:
+  clip_grad_norm: True
+  clip_grad_norm_value: 5.0
+  optimizer: adamW
+  weight_decay: 0.01
+  base_lr: 0.001 # 0.0002
+  max_epoch: 5000 # 10000
+  scheduler: polynomial_with_warmup

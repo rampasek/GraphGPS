@@ -33,7 +33,8 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
         # Parameters update after accumulating gradients for given num. batches.
         if ((iter + 1) % batch_accumulation == 0) or (iter + 1 == len(loader)):
             if cfg.optim.clip_grad_norm:
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                torch.nn.utils.clip_grad_norm_(model.parameters(),
+                                               cfg.optim.clip_grad_norm_value)
             optimizer.step()
             optimizer.zero_grad()
         logger.update_stats(true=_true,

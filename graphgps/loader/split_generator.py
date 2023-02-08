@@ -23,6 +23,10 @@ def prepare_splits(dataset):
     elif split_mode.startswith('cv-'):
         cv_type, k = split_mode.split('-')[1:]
         setup_cv_split(dataset, cv_type, int(k))
+    elif split_mode == "fixed":
+        setup_fixed_split(dataset)
+    elif split_mode == "sliced":
+        setup_sliced_split(dataset)
     else:
         raise ValueError(f"Unknown split mode: {split_mode}")
 
@@ -101,9 +105,9 @@ def setup_random_split(dataset):
         raise ValueError(
             f"Three split ratios is expected for train/val/test, received "
             f"{len(split_ratios)} split ratios: {repr(split_ratios)}")
-    elif sum(split_ratios) != 1:
+    elif sum(split_ratios) != 1 and sum(split_ratios) != len(dataset):
         raise ValueError(
-            f"The train/val/test split ratios must sum up to 1, input ratios "
+            f"The train/val/test split ratios must sum up to 1/length of the dataset, input ratios "
             f"sum up to {sum(split_ratios):.2f} instead: {repr(split_ratios)}")
 
     train_index, val_test_index = next(
@@ -112,14 +116,46 @@ def setup_random_split(dataset):
             random_state=cfg.seed
         ).split(dataset.data.y, dataset.data.y)
     )
+
+    if isinstance(split_ratios[0], float):
+        val_test_ratio = split_ratios[1] / (1 - split_ratios[0])
+    else:
+        val_test_ratio = split_ratios[1]
+
     val_index, test_index = next(
         ShuffleSplit(
-            train_size=split_ratios[1] / (1 - split_ratios[0]),
+            train_size=val_test_ratio,
             random_state=cfg.seed
         ).split(dataset.data.y[val_test_index], dataset.data.y[val_test_index])
     )
     val_index = val_test_index[val_index]
     test_index = val_test_index[test_index]
+
+    set_dataset_splits(dataset, [train_index, val_index, test_index])
+
+
+def setup_fixed_split(dataset):
+    """Generate fixed splits.
+
+    Generate fixed train/val/test based on the ratios defined in the config
+    file.
+    """
+    train_index = list(range(cfg.dataset.split[0]))
+    val_index = list(range(cfg.dataset.split[0], sum(cfg.dataset.split[:2])))
+    test_index = list(range(sum(cfg.dataset.split[:2]), sum(cfg.dataset.split)))
+
+    set_dataset_splits(dataset, [train_index, val_index, test_index])
+
+
+def setup_sliced_split(dataset):
+    """Generate sliced splits.
+
+    Generate sliced train/val/test based on the ratios defined in the config
+    file.
+    """
+    train_index = list(range(*cfg.dataset.split[0]))
+    val_index = list(range(*cfg.dataset.split[1]))
+    test_index = list(range(*cfg.dataset.split[2]))
 
     set_dataset_splits(dataset, [train_index, val_index, test_index])
 
