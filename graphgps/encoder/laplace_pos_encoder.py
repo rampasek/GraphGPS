@@ -35,13 +35,13 @@ class LapPENodeEncoder(torch.nn.Module):
         norm_type = pecfg.raw_norm_type.lower()  # Raw PE normalization layer type
         self.pass_as_var = pecfg.pass_as_var  # Pass PE also as a separate variable
 
-        if dim_emb - dim_pe < 1:
+        if dim_emb - dim_pe < 0: # formerly 1, but you could have zero feature size
             raise ValueError(f"LapPE size {dim_pe} is too large for "
                              f"desired embedding size of {dim_emb}.")
 
-        if expand_x:
+        if expand_x and dim_emb - dim_pe > 0:
             self.linear_x = nn.Linear(dim_in, dim_emb - dim_pe)
-        self.expand_x = expand_x
+        self.expand_x = expand_x and dim_emb - dim_pe > 0
 
         # Initial projection of eigenvalue and the node's eigenvector value
         self.linear_A = nn.Linear(2, dim_pe)
