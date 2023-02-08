@@ -1,0 +1,83 @@
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: True
+  project: ZINC
+dataset:
+  format: PyG-ZINC
+  name: subset
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+#  node_encoder_name: TypeDictNode+GraphormerBias+LapPE
+  node_encoder_name: TypeDictNode+GraphormerBias+RWSE
+  node_encoder_num_types: 28
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: TypeDictEdge
+  edge_encoder_num_types: 4
+  edge_encoder_bn: False
+posenc_GraphormerBias:
+  enable: True
+  node_degrees_only: False
+  num_spatial_types: 20
+  num_in_degrees: 64
+  num_out_degrees: 64
+graphormer:
+  use_graph_token: False
+posenc_LapPE:
+  enable: False
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 8
+  model: DeepSet
+  dim_pe: 8
+  layers: 2
+  raw_norm_type: none
+posenc_RWSE:
+  enable: True
+  kernel:
+    times_func: range(1,21)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: GPSModel
+  loss_fun: l1
+  edge_decoding: dot
+  graph_pooling: add
+gt:
+  layer_type: GINE+BiasedTransformer  # CustomGatedGCN+Performer
+  layers: 10
+  n_heads: 4
+  dim_hidden: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
+  dropout: 0.0
+  attn_dropout: 0.5
+  layer_norm: False
+  batch_norm: True
+gnn:
+  head: san_graph
+  layers_pre_mp: 0
+  layers_post_mp: 3  # Not used when `gnn.head: san_graph`
+  dim_inner: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
+  normalize_adj: False
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1e-5
+  base_lr: 0.001
+  max_epoch: 2000
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 50
