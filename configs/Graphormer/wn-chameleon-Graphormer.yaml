@@ -1,0 +1,63 @@
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: True
+  project: WN-chameleon
+dataset:
+  format: PyG-WikipediaNetwork
+  name: chameleon
+  task: node
+  task_type: classification
+  transductive: True
+  split_mode: standard
+  node_encoder: True
+  node_encoder_name: LinearNode+GraphormerBias
+  node_encoder_bn: False
+  edge_encoder: False
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: False
+posenc_GraphormerBias:
+  enable: True
+  num_spatial_types: 20
+  num_in_degrees: 729
+  num_out_degrees: 89
+train:
+  mode: custom
+  sampler: full_batch
+#  sampler: saint_rw
+#  batch_size: 32
+  eval_period: 5
+  enable_ckpt: False
+#  ckpt_period: 100
+model:
+  type: Graphormer
+  loss_fun: cross_entropy
+  edge_decoding: dot
+graphormer:
+  use_graph_token: False
+  num_layers: 2
+  num_heads: 4
+  embed_dim: 64  # `graphormer.embed_dim` must match `gnn.dim_inner`
+  dropout: 0.2
+  attention_dropout: 0.0
+  mlp_dropout: 0.2
+  input_dropout: 0.0
+gnn:
+  head: node
+  layers_pre_mp: 0
+  layers_post_mp: 1
+  dim_inner: 64  # `gt.dim_hidden` must match `gnn.dim_inner`
+  batchnorm: True
+  act: gelu
+  dropout: 0.2
+  agg: mean
+  normalize_adj: False
+optim:
+  clip_grad_norm: True
+  clip_grad_norm_value: 5.0
+  optimizer: adamW
+  weight_decay: 1e-5
+  base_lr: 0.0005
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
