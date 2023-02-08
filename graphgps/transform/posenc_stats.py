@@ -5,9 +5,9 @@ import torch
 import torch.nn.functional as F
 from numpy.linalg import eigvals
 from torch_geometric.utils import (get_laplacian, to_scipy_sparse_matrix,
-                                   to_undirected, to_dense_adj)
+                                   to_undirected, to_dense_adj, scatter)
 from torch_geometric.utils.num_nodes import maybe_num_nodes
-from torch_scatter import scatter_add
+from graphgps.encoder.graphormer_encoder import graphormer_pre_processing
 
 
 def compute_posenc_stats(data, pe_types, is_undirected, cfg):
@@ -19,6 +19,7 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     'HKfullPE': Full heat kernels and their diagonals. (NOT IMPLEMENTED)
     'HKdiagSE': Diagonals of heat kernel diffusion.
     'ElstaticSE': Kernel based on the electrostatic interaction between nodes.
+    'Graphormer': Computes spatial types and optionally edges along shortest paths.
 
     Args:
         data: PyG graph
@@ -32,7 +33,8 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     """
     # Verify PE types.
     for t in pe_types:
-        if t not in ['LapPE', 'EquivStableLapPE', 'SignNet', 'RWSE', 'HKdiagSE', 'HKfullPE', 'ElstaticSE']:
+        if t not in ['LapPE', 'EquivStableLapPE', 'SignNet', 'RWSE', 'HKdiagSE',
+                     'HKfullPE', 'ElstaticSE', 'GraphormerBias']:
             raise ValueError(f"Unexpected PE stats selection {t} in {pe_types}")
 
     # Basic preprocessing of the input graph.
@@ -134,6 +136,12 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
         elstatic = get_electrostatic_function_encoding(undir_edge_index, N)
         data.pestat_ElstaticSE = elstatic
 
+    if 'GraphormerBias' in pe_types:
+        data = graphormer_pre_processing(
+            data,
+            cfg.posenc_GraphormerBias.num_spatial_types
+        )
+
     return data
 
 
@@ -195,7 +203,7 @@ def get_rw_landing_probs(ksteps, edge_index, edge_weight=None,
         edge_weight = torch.ones(edge_index.size(1), device=edge_index.device)
     num_nodes = maybe_num_nodes(edge_index, num_nodes)
     source, dest = edge_index[0], edge_index[1]
-    deg = scatter_add(edge_weight, source, dim=0, dim_size=num_nodes)  # Out degrees.
+    deg = scatter(edge_weight, source, dim=0, dim_size=num_nodes, reduce='sum')  # Out degrees.
     deg_inv = deg.pow(-1.)
     deg_inv.masked_fill_(deg_inv == float('inf'), 0)
 

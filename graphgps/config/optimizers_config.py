@@ -25,3 +25,4 @@ def extended_optim_cfg(cfg):
 
     # Clip gradient norms while training
     cfg.optim.clip_grad_norm = False
+    cfg.optim.clip_grad_norm_value = 1.0
