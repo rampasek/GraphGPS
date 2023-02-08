@@ -5,7 +5,7 @@ import torch
 from torch import Tensor
 from torch_geometric.utils import degree
 from torch_geometric.utils import remove_self_loops
-from torch_scatter import scatter
+from torch_geometric.utils import scatter
 from yacs.config import CfgNode
 
 
@@ -31,7 +31,7 @@ def negate_edge_index(edge_index, batch=None):
     batch_size = batch.max().item() + 1
     one = batch.new_ones(batch.size(0))
     num_nodes = scatter(one, batch,
-                        dim=0, dim_size=batch_size, reduce='add')
+                        dim=0, dim_size=batch_size, reduce='sum')
     cum_nodes = torch.cat([batch.new_zeros(1), num_nodes.cumsum(dim=0)])
 
     idx0 = batch[edge_index[0]]
@@ -53,7 +53,7 @@ def negate_edge_index(edge_index, batch=None):
         idx = _idx1 * n + _idx2
         zero = torch.zeros(_idx1.numel(), dtype=torch.short,
                            device=edge_index.device)
-        scatter(zero, idx, dim=0, out=adj, reduce='mul')
+        adj = scatter(zero, idx, dim=0, dim_size=flattened_size, reduce='mul')
 
         # Convert to edge index format
         adj = adj.view(size)
@@ -121,6 +121,10 @@ def make_wandb_name(cfg):
             dataset_name += 'LDP'
         else:
             dataset_name += cfg.dataset.name
+
+    if cfg.dataset.infer_link_label in ["edge"]:
+        dataset_name += f"+{cfg.dataset.infer_link_label}"
+    
     # Format model name.
     model_name = cfg.model.type
     if cfg.model.type in ['gnn', 'custom_gnn']:
@@ -128,6 +132,13 @@ def make_wandb_name(cfg):
     elif cfg.model.type == 'GPSModel':
         model_name = f"GPS.{cfg.gt.layer_type}"
     model_name += f".{cfg.name_tag}" if cfg.name_tag else ""
+
+    if cfg.posenc_LapPE.enable:
+        model_name += "+LapPE"
+
+    if cfg.posenc_RWSE.enable:
+        model_name += "+RWSE"
+
     # Compose wandb run name.
     name = f"{dataset_name}.{model_name}.r{cfg.run_id}"
     return name
