@@ -52,7 +52,6 @@ def task_specific_preprocessing(data, cfg):
         # If encodings are present they can append to the empty data.x
         if not supported_encoding_available:
             data.x = torch.zeros((data.x.size(0), 1))
-        data.num_classes = 10
         data.y = data.y.sub(1).to(torch.long)
 
     if cfg.dataset.name == "CSL":
@@ -62,6 +61,5 @@ def task_specific_preprocessing(data, cfg):
             data.x = torch.zeros((data.num_nodes, 1))
         else:
             data.x = torch.zeros((data.num_nodes, 0))
-        data.num_classes = 10
 
     return data
