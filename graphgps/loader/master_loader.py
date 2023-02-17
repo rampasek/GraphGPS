@@ -264,24 +264,22 @@ def preformat_GNNBenchmarkDataset(dataset_dir, name):
     Returns:
         PyG dataset object
     """
-    tf_list = []
     if name in ['MNIST', 'CIFAR10']:
         tf_list = [concat_x_and_pos]  # concat pixel value and pos. coordinate
         tf_list.append(partial(typecast_x, type_str='float'))
-    elif name == "CSL":
-        pass
+    elif name in ['PATTERN', 'CLUSTER', 'CSL']:
+        tf_list = []
     else:
-        ValueError(f"Loading dataset '{name}' from "
-                   f"GNNBenchmarkDataset is not supported.")
+        raise ValueError(f"Loading dataset '{name}' from "
+                         f"GNNBenchmarkDataset is not supported.")
 
-    if name in ['MNIST', 'CIFAR10']:
+    if name in ['MNIST', 'CIFAR10', 'PATTERN', 'CLUSTER']:
         dataset = join_dataset_splits(
             [GNNBenchmarkDataset(root=dataset_dir, name=name, split=split)
             for split in ['train', 'val', 'test']]
         )
         pre_transform_in_memory(dataset, T.Compose(tf_list))
-
-    elif name == "CSL":
+    elif name == 'CSL':
         dataset = GNNBenchmarkDataset(root=dataset_dir, name=name)
 
     return dataset
@@ -540,7 +538,8 @@ def preformat_TUDataset(dataset_dir, name):
     elif name.startswith('IMDB-') or name == "COLLAB":
         func = T.Constant()
     else:
-        ValueError(f"Loading dataset '{name}' from TUDataset is not supported.")
+        raise ValueError(f"Loading dataset '{name}' from "
+                         f"TUDataset is not supported.")
     dataset = TUDataset(dataset_dir, name, pre_transform=func)
     return dataset
 
