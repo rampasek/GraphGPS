@@ -82,10 +82,8 @@ def log_loaded_dataset(dataset, format, name):
 @register_loader('custom_master_loader')
 def load_dataset_master(format, name, dataset_dir):
     """
-    Master loader that controls loading of all datasets, overshadowing execution
-    of any default GraphGym dataset loader. Default GraphGym dataset loader are
-    instead called from this function, the format keywords `PyG` and `OGB` are
-    reserved for these default GraphGym loaders.
+    Master loader that controls loading of all GraphGPS datasets, overshadowing execution
+    of 'OGB' datasets.
 
     Custom transforms and dataset splitting is applied to each loaded dataset.
 
@@ -143,11 +141,6 @@ def load_dataset_master(format, name, dataset_dir):
 
         else:
             raise ValueError(f"Unexpected PyG Dataset identifier: {format}")
-
-    # GraphGym default loader for Pytorch Geometric datasets
-    elif format == 'PyG':
-        dataset = load_pyg(name, dataset_dir)
-
     elif format == 'OGB':
         if name.startswith('ogbg'):
             dataset = preformat_OGB_Graph(dataset_dir, name.replace('_', '-'))
@@ -178,7 +171,7 @@ def load_dataset_master(format, name, dataset_dir):
         else:
             raise ValueError(f"Unsupported OGB(-derived) dataset: {name}")
     else:
-        raise ValueError(f"Unknown data format: {format}")
+        return None # Not a custom graphgps dataset. Fall back to other loaders
 
     pre_transform_in_memory(dataset, partial(task_specific_preprocessing, cfg=cfg))
 
