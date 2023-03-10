@@ -56,8 +56,7 @@ class GatedGCNLayer(pyg_nn.conv.MessagePassing):
 
         Ax = self.A(x)
         Bx = self.B(x)
-        if e is not None:
-            Ce = self.C(e)
+        Ce = self.C(e)
         Dx = self.D(x)
         Ex = self.E(x)
 
@@ -70,35 +69,31 @@ class GatedGCNLayer(pyg_nn.conv.MessagePassing):
                               e=e, Ax=Ax,
                               PE=pe_LapPE)
 
-        
-        if e is not None:
-            e = self.bn_edge_e(e)
-            e = self.act_fn_e(e)
-            e = F.dropout(e, self.dropout, training=self.training)
-
         x = self.bn_node_x(x)
+        e = self.bn_edge_e(e)
+
         x = self.act_fn_x(x)
+        e = self.act_fn_e(e)
+
         x = F.dropout(x, self.dropout, training=self.training)
+        e = F.dropout(e, self.dropout, training=self.training)
 
         if self.residual:
             x = x_in + x
-            if e is not None:
-                e = e_in + e
+            e = e_in + e
 
         batch.x = x
         batch.edge_attr = e
 
         return batch
 
-    def message(self, Dx_i, Ex_j, PE_i, PE_j, Ce=None):
+    def message(self, Dx_i, Ex_j, PE_i, PE_j, Ce):
         """
         {}x_i           : [n_edges, out_dim]
         {}x_j           : [n_edges, out_dim]
         {}e             : [n_edges, out_dim]
         """
-        e_ij = Dx_i + Ex_j
-        if Ce is not None:
-            e_ij = e_ij + Ce
+        e_ij = Dx_i + Ex_j + Ce
         sigma_ij = torch.sigmoid(e_ij)
 
         # Handling for Equivariant and Stable PE using LapPE
