@@ -1,20 +1,22 @@
 out_dir: results
-metric_best: mae
-metric_agg: argmin
+metric_best: ap
+metric_agg: argmax
 wandb:
   use: False
   project: scratch  # W&B project for debugging runs.
 dataset:
-  format: OGB
+  format: PyG-DEL_v4
   name: PCQM4Mv2-inference
   task: graph
-  task_type: regression
+  task_type: classification
   transductive: False
   node_encoder: True
-  node_encoder_name: Atom+RWSE
+  node_encoder_name: TypeDictNode+RWSE
+  node_encoder_num_types: 28
   node_encoder_bn: False
   edge_encoder: True
-  edge_encoder_name: Bond
+  edge_encoder_name: TypeDictEdge
+  edge_encoder_num_types: 4
   edge_encoder_bn: False
 pretrained:
   dir: pretrained/pcqm4m-GPS+RWSE.deep
@@ -24,7 +26,7 @@ train:
   batch_size: 256
 model:
   type: GPSModel
-  loss_fun: l1
+  loss_fun: cross_entropy
   graph_pooling: mean
 gnn:
   head: san_graph
