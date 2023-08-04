@@ -109,6 +109,9 @@ def load_dataset_master(format, name, dataset_dir):
         elif pyg_dataset_id == 'GNNBenchmarkDataset':
             dataset = preformat_GNNBenchmarkDataset(dataset_dir, name)
 
+        elif pyg_dataset_id == 'DEL_v4':
+            dataset = DEL_Dataset(dataset_dir)
+        
         elif pyg_dataset_id == 'MalNetTiny':
             dataset = preformat_MalNetTiny(dataset_dir, feature_set=name)
 
