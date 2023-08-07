@@ -6,16 +6,16 @@ wandb:
   project: scratch  # W&B project for debugging runs.
 dataset:
   format: PyG-DEL_v4
-  name: PCQM4Mv2-inference
+  name: DEL_v4
   task: graph
   task_type: classification
   transductive: False
   node_encoder: True
-  node_encoder_name: TypeDictNode+RWSE
+  node_encoder_name: Atom+RWSE
   node_encoder_num_types: 28
   node_encoder_bn: False
   edge_encoder: True
-  edge_encoder_name: TypeDictEdge
+  edge_encoder_name: Bond
   edge_encoder_num_types: 4
   edge_encoder_bn: False
 pretrained:
