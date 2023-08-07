@@ -15,6 +15,7 @@ from torch_geometric.graphgym.loader import load_pyg, load_ogb, set_dataset_attr
 from torch_geometric.graphgym.register import register_loader
 
 from graphgps.loader.dataset.aqsol_molecules import AQSOL
+from graphgps.loader.dataset.DEL_v4 import DEL_Dataset
 from graphgps.loader.dataset.coco_superpixels import COCOSuperpixels
 from graphgps.loader.dataset.malnet_tiny import MalNetTiny
 from graphgps.loader.dataset.voc_superpixels import VOCSuperpixels
