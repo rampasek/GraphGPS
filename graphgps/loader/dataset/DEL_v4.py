@@ -13,6 +13,7 @@ class DEL_Dataset(InMemoryDataset):
         self.folder = osp.join(root, 'DEL')
 
         super(DEL_Dataset, self).__init__(self.folder, transform, pre_transform)
+        self.data, self.slices = torch.load(self.processed_paths[0])
 
     def __len__(self):
         return len(self.data)
