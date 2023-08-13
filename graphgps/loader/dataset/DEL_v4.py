@@ -5,38 +5,66 @@ from torch_geometric.data import Data, InMemoryDataset
 from tqdm import tqdm
 from chainer_chemistry.dataset.splitters.random_splitter import RandomSplitter
 from ogb.utils import smiles2graph
+from ogb.utils.torch_util import replace_numpy_with_torchtensor
+from torch_geometric.graphgym.loader import set_dataset_attr
 
 class DEL_Dataset(InMemoryDataset):
     def __init__(self, root, smiles2graph=smiles2graph, transform=None, pre_transform=None):
         self.original_root = root
         self.smiles2graph = smiles2graph
         self.folder = osp.join(root, 'DEL')
+        self.train_graph_index = []
+        self.val_graph_index = []
+        self.test_graph_index = []
+        self.data_list = []
 
         super(DEL_Dataset, self).__init__(self.folder, transform, pre_transform)
         self.data, self.slices = torch.load(self.processed_paths[0])
-
-    def __len__(self):
-        return len(self.data)
+    
 
     def process(self):
         df = pd.read_csv(osp.join(self.original_root, 'DEL_v4.csv'))
-        train_df, valid_df, test_df = self.split(df, data_column='SMILES', split_type='random')
+        
+        train_df = df[df['Split'] == 'train']
+        valid_df = df[df['Split'] == 'valid']
+        test_df = df[df['Split'] == 'test']
+        
+        self.data, self.slices = self.process_data(df)
+        
+        shuffle_split = {'train': train_df.index.tolist(), 'val': valid_df.index.tolist(), 'test': test_df.index.tolist()}
+       
+        torch.save(shuffle_split,
+                   osp.join(self.folder, f'DEL_shuffle_split_dict.pt'))
+        
+        split_names = [
+            'train_graph_index', 'val_graph_index', 'test_graph_index'
+        ]
+        splits = [train_df.index.tolist(), valid_df.index.tolist(), test_df.index.tolist()]
+        for split_name, split_index in zip(split_names, splits):
+            set_dataset_attr(self, split_name, split_index, len(split_index))
+        #print(self.data)
+        print("DEL_v4.py", self.data.val_graph_index[:10])
+        
+        
 
-        train_data = self.process_data(train_df)
-
-        valid_data = self.process_data(valid_df)
-
-        test_data = self.process_data(test_df)
-
-        processed_data = self.collate(train_data + valid_data + test_data)
-        print('Saving...')
+        processed_data = (self.data, self.slices)
         torch.save(processed_data, self.processed_paths[0])
 
+        #train_data = self.process_data(train_df)
+
+        #valid_data = self.process_data(valid_df)
+
+        #test_data = self.process_data(test_df)
+
+        print('Saving...')
+        print(self.processed_paths)
+
     def process_data(self, data_df):
-        smiles_list = data_df['SMILES']
+        
+        smiles_list = data_df['SMILES'].tolist()
 
         print('Converting SMILES strings into graphs...')
-        data_list = []
+        
         for i in tqdm(range(len(smiles_list))):
             data = Data()
 
@@ -50,45 +78,60 @@ class DEL_Dataset(InMemoryDataset):
             data.edge_index = torch.tensor(graph['edge_index'], dtype=torch.long)
             data.edge_attr = torch.tensor(graph['edge_feat'], dtype=torch.long)
             data.x = torch.tensor(graph['node_feat'], dtype=torch.long)
-            data.y = torch.Tensor([data_df['Activity'].iloc[i]])
+            data.y = torch.tensor([data_df['Activity'].iloc[i]])
 
-            data_list.append(data)
+            self.data_list.append(data)
 
         if self.pre_transform is not None:
-            data_list = [self.pre_transform(data) for data in data_list]
+            self.data_list = [self.pre_transform(data) for data in self.data_list]
 
-        return data_list
-
-    def split(self, df: pd.DataFrame, data_column: str, split_type: str):
-        if split_type == 'random':
-            splitter = RandomSplitter()
-        else:
-            raise NotImplemented(f'Split type {split_type} is not allowed. Only random splitting is supported!')
-        
-        train_idx, valid_idx, test_idx = splitter.train_valid_test_split(df, smiles_list=df[data_column],
-                                                                         frac_train=0.7, frac_valid=0.1, frac_test=0.2,
-                                                                         seed=0, include_chirality=True,
-                                                                         return_index=True)
-        df['split'] = None
-        df.loc[train_idx, 'split'] = 'Train'
-        df.loc[valid_idx, 'split'] = 'Valid'
-        df.loc[test_idx, 'split'] = 'Test'
-
-        return df[df['split'] == 'Train'], df[df['split'] == 'Valid'], df[df['split'] == 'Test']
-
+        return self.collate(self.data_list)
+    
+    
     @property
     def processed_file_names(self):
         return ['train.pt', 'val.pt', 'test.pt']
 
+    @property
+    def raw_file_names(self):
+        return ['train.pickle', 'val.pickle', 'test.pickle']
+    
     def __getitem__(self, idx):
         return self.data_list[idx]
     
     def get(self, idx):
         return self.data_list[idx]
+                   
+    def get_idx_split(self):
+        """ Get dataset splits.
 
+        Args:
+            split_name: Split type: 'shuffle', 'num-atoms'
 
-root = './DEL'
-dataset = DEL_Dataset(root)
-print(len(dataset))  
-print(dataset[0])
-print(dataset.get(0)) 
+        Returns:
+            Dict with 'train', 'val', 'test', splits indices.
+        """
+        split_file = osp.join(
+            self.folder,
+            f'DEL_shuffle_split_dict.pt'
+        )
+        
+        split_dict = replace_numpy_with_torchtensor(torch.load(split_file))
+        return split_dict
+if __name__=='__main__':
+    
+    root = './DEL'
+    dataset = DEL_Dataset(root)
+
+    #for split_name in 'train_graph_index', 'val_graph_index', 'test_graph_index':
+        #if not hasattr(dataset.data, split_name):
+            #raise ValueError(f"Missing '{split_name}' for standard split")
+
+    print(len(dataset))  
+    print(dataset[0])
+    print(dataset.get(0))
+    train_idx, val_idx, test_idx = dataset.get_idx_split()
+
+    print("Train Index:", train_idx)
+    print("Validation Index:", val_idx)
+    print("Test Index:", test_idx)
