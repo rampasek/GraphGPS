@@ -4,6 +4,7 @@ import os
 
 import numpy as np
 from sklearn.model_selection import KFold, StratifiedKFold, ShuffleSplit
+from torch import from_numpy
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.loader import index2mask, set_dataset_attr
 
@@ -186,7 +187,7 @@ def set_dataset_splits(dataset, splits):
     if task_level == 'node':
         split_names = ['train_mask', 'val_mask', 'test_mask']
         for split_name, split_index in zip(split_names, splits):
-            mask = index2mask(split_index, size=dataset.data.y.shape[0])
+            mask = index2mask(from_numpy(split_index), size=dataset.data.y.shape[0])
             set_dataset_attr(dataset, split_name, mask, len(mask))
 
     elif task_level == 'graph':
