@@ -12,7 +12,7 @@ dataset:
   split_mode: random
   split: [0.8, 0.1, 0.1]
   node_encoder: True
-  node_encoder_name: RWSE
+  node_encoder_name: LapPE
 #   node_encoder_num_types: 28
   node_encoder_bn: False
   edge_encoder: False
