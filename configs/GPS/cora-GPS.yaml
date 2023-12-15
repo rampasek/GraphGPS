@@ -19,13 +19,16 @@ dataset:
   edge_encoder_name: DummyEdge
 #   edge_encoder_num_types: 4
   edge_encoder_bn: False
-posenc_RWSE:
+posenc_LapPE:
   enable: True
-  kernel:
-    times_func: range(1,15)
-  model: Linear
-  dim_pe: 28
-  raw_norm_type: BatchNorm
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 8
+  model: DeepSet
+  dim_pe: 8
+  layers: 2
+  raw_norm_type: none
 train:
   mode: custom
   batch_size: 32
