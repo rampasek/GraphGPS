@@ -52,13 +52,25 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
 
     # Eigen values and vectors.
     evals, evects = None, None
+    dev = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    undir_edge_index = undir_edge_index.to(dev)
     if 'LapPE' in pe_types or 'EquivStableLapPE' in pe_types:
-        # Eigen-decomposition with numpy, can be reused for Heat kernels.
-        L = to_scipy_sparse_matrix(
-            *get_laplacian(undir_edge_index, normalization=laplacian_norm_type,
-                           num_nodes=N)
-        )
-        evals, evects = np.linalg.eigh(L.toarray())
+        try:
+            if not cfg.prep_w_GPU:
+                raise ImportError
+            import cupy as cp
+            edge_i, edge_w = get_laplacian(undir_edge_index, normalization=laplacian_norm_type, num_nodes=N)
+            dense_L = to_dense_adj(edge_index=edge_i, edge_attr=edge_w).squeeze() 
+            L = cp.asarray(dense_L)
+            evals, evects = cp.linalg.eigh(L)
+            evals, evects = cp.asnumpy(evals), cp.asnumpy(evects)
+        except ImportError:
+            # Eigen-decomposition with numpy, can be reused for Heat kernels.
+            L = to_scipy_sparse_matrix(
+                *get_laplacian(undir_edge_index, normalization=laplacian_norm_type,
+                               num_nodes=N)
+            )
+            evals, evects = np.linalg.eigh(L.toarray())
         
         if 'LapPE' in pe_types:
             max_freqs=cfg.posenc_LapPE.eigen.max_freqs
@@ -77,11 +89,21 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
         norm_type = cfg.posenc_SignNet.eigen.laplacian_norm.lower()
         if norm_type == 'none':
             norm_type = None
-        L = to_scipy_sparse_matrix(
-            *get_laplacian(undir_edge_index, normalization=norm_type,
-                           num_nodes=N)
-        )
-        evals_sn, evects_sn = np.linalg.eigh(L.toarray())
+        try:
+            if not cfg.prep_w_GPU:
+                raise ImportError
+            import cupy as cp
+            edge_i, edge_w = get_laplacian(undir_edge_index, normalization=laplacian_norm_type, num_nodes=N)
+            dense_L = to_dense_adj(edge_index=edge_i, edge_attr=edge_w).squeeze()
+            L = cp.asarray(dense_L)
+            evals, evects = cp.linalg.eigh(L)
+            evals_sn, evects_sn = cp.asnumpy(evals), cp.asnumpy(evects) 
+        except ImportError:
+            L = to_scipy_sparse_matrix(
+                *get_laplacian(undir_edge_index, normalization=norm_type, num_nodes=N)
+            )
+            evals_sn, evects_sn = np.linalg.eigh(L.toarray())
+
         data.eigvals_sn, data.eigvecs_sn = get_lap_decomp_stats(
             evals=evals_sn, evects=evects_sn,
             max_freqs=cfg.posenc_SignNet.eigen.max_freqs,
@@ -102,10 +124,21 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
         # Get the eigenvalues and eigenvectors of the regular Laplacian,
         # if they have not yet been computed for 'eigen'.
         if laplacian_norm_type is not None or evals is None or evects is None:
-            L_heat = to_scipy_sparse_matrix(
-                *get_laplacian(undir_edge_index, normalization=None, num_nodes=N)
-            )
-            evals_heat, evects_heat = np.linalg.eigh(L_heat.toarray())
+            ## normalization None for heat Kernels?  
+            try:
+                if not cfg.prep_w_GPU:
+                    raise ImportError
+                import cupy as cp
+                edge_i, edge_w = get_laplacian(undir_edge_index, normalization=None, num_nodes=N)
+                dense_L = to_dense_adj(edge_index=edge_i, edge_attr=edge_w).squeeze()
+                L_heat = cp.asarray(dense_L)
+                evals, evects = cp.linalg.eigh(L_heat)
+                evals_heat, evects_heat = cp.asnumpy(evals), cp.asnumpy(evects)
+            except ImportError:
+                L_heat = to_scipy_sparse_matrix(
+                    *get_laplacian(undir_edge_index, normalization=None, num_nodes=N)
+                )
+                evals_heat, evects_heat = np.linalg.eigh(L_heat.toarray())
         else:
             evals_heat, evects_heat = evals, evects
         evals_heat = torch.from_numpy(evals_heat)

@@ -116,6 +116,8 @@ def run_loop_settings():
 if __name__ == '__main__':
     # Load cmd line args
     args = parse_args()
+    # default prep w/ GPU
+    cfg.prep_w_GPU = True
     # Load config file
     set_cfg(cfg)
     load_cfg(cfg, args)
